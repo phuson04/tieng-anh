@@ -105,6 +105,20 @@ body {
   padding: 5px 10px; font-size: 16px;
   border-radius: 4px; border: 1px solid #0d9488; outline: none;
 }
+
+/* MULTI-SELECT CHỦ ĐỀ (tab Học Từ) */
+.multi-select-wrap { position: relative; }
+.multi-select-btn {
+  padding: 6px 14px; font-size: 15px; font-weight: bold; border-radius: 6px;
+  border: 1px solid #0d9488; background: white; cursor: pointer; color: #333;
+  min-width: 170px; text-align: left;
+}
+.multi-select-panel {
+  display: none; position: absolute; top: 115%; left: 0; z-index: 60;
+  background: white; border: 1px solid #ccc; border-radius: 10px; padding: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15); min-width: 230px;
+}
+.multi-select-panel.active { display: block; }
 .mastered-filter-btn {
   padding: 6px 14px; font-size: 13px; font-weight: bold; border: 2px solid #34a853;
   border-radius: 20px; cursor: pointer; background: white; color: #34a853; transition: 0.2s;
@@ -281,6 +295,34 @@ th { background-color: #0d9488; color: white; }
   padding: 12px 24px; font-size: 16px; background-color: #0d9488; font-weight: bold;
   color: white; border: none; border-radius: 6px; cursor: pointer; margin-top: 10px;
 }
+.quiz-result button:disabled { background-color: #ccc; cursor: not-allowed; }
+
+/* THOÁT + HÀNG NÚT TRÊN CÙNG QUIZ */
+.quiz-top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px; flex-wrap: wrap; }
+.exit-btn {
+  padding: 5px 12px; font-size: 13px; font-weight: bold;
+  border: 2px solid #e0e0e0; border-radius: 20px;
+  cursor: pointer; background: white; color: #888; transition: 0.2s;
+}
+.exit-btn:hover { border-color: #ea4335; color: #ea4335; background: #fff5f5; }
+
+/* BẮT BUỘC LÀM LẠI CÂU SAI */
+#quiz-mandatory-msg {
+  background: #fdecea; border: 2px solid #ea4335; border-radius: 10px;
+  padding: 10px 16px;
+}
+
+/* TAB TIẾN TRÌNH / BẢNG ĐIỂM */
+.stats-summary-box { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; width: 90%; max-width: 800px; margin-bottom: 15px; }
+.stats-card {
+  background: white; border-radius: 12px; padding: 16px 20px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center; flex: 1; min-width: 140px;
+}
+.stats-card .stats-value { font-size: 26px; font-weight: bold; color: #0d9488; }
+.stats-card .stats-label { font-size: 13px; color: #888; margin-top: 4px; }
+.score-bar-wrap { background: #eee; border-radius: 6px; overflow: hidden; height: 7px; width: 100%; margin-top: 5px; min-width: 70px; }
+.score-bar-fill { height: 100%; border-radius: 6px; transition: width 0.3s; }
+.pct-badge { padding: 3px 9px; border-radius: 6px; font-size: 12px; font-weight: bold; color: white; display: inline-block; }
 </style>
 </head>
 <body>
@@ -295,6 +337,7 @@ th { background-color: #0d9488; color: white; }
 <div class="nav-bar">
   <button class="nav-btn active" id="btn-tab-study" onclick="switchTab('study')">📚 Học Từ</button>
   <button class="nav-btn" id="btn-tab-quiz" onclick="switchTab('quiz')">✍️ Kiểm Tra</button>
+  <button class="nav-btn" id="btn-tab-stats" onclick="switchTab('stats')">📊 Tiến Trình</button>
 </div>
 
 <!-- ===== TAB HỌC TỪ ===== -->
@@ -324,9 +367,13 @@ th { background-color: #0d9488; color: white; }
 
   <div class="filter-box">
     <label>Hiển thị: </label>
-    <select id="topic-filter" onchange="applyFilter()">
-      <option value="all">Tất cả chủ đề</option>
-    </select>
+    <div class="multi-select-wrap" id="topic-multiselect-wrap">
+      <button type="button" class="multi-select-btn" id="topic-multiselect-btn" onclick="toggleTopicDropdown()">Tất cả chủ đề ▾</button>
+      <div class="multi-select-panel" id="topic-multiselect-panel">
+        <span class="topic-select-all" onclick="toggleAllStudyTopics()">☑ Chọn / Bỏ chọn tất cả</span>
+        <div class="topic-checkbox-list" id="study-topic-checklist"></div>
+      </div>
+    </div>
     <button class="mastered-filter-btn" id="btn-hide-mastered" onclick="toggleHideMastered()">🙈 Ẩn từ đã thuộc</button>
   </div>
 
@@ -407,7 +454,8 @@ th { background-color: #0d9488; color: white; }
 
   <div class="quiz-card" id="quiz-play-area">
     <div id="quiz-retry-banner" class="quiz-retry-banner" style="display:none;"></div>
-    <div class="quiz-flag-row">
+    <div class="quiz-top-row">
+      <button class="exit-btn" onclick="exitQuiz()">❌ Thoát</button>
       <button class="flag-btn" id="flag-btn" onclick="toggleFlag()">🚩 Đánh dấu làm lại</button>
     </div>
     <div class="quiz-progress" id="quiz-progress">Câu 1 / 10</div>
@@ -417,14 +465,41 @@ th { background-color: #0d9488; color: white; }
   </div>
 
   <div class="quiz-card quiz-result" id="quiz-result-area">
-    <h2>Hoàn thành! 🎉</h2>
+    <h2 id="quiz-result-title">Hoàn thành! 🎉</h2>
     <p>Điểm của bạn:</p>
     <h1 id="quiz-final-score" style="margin: 10px 0;">0 / 0</h1>
     <div id="quiz-high-score"></div>
+
+    <div id="quiz-mandatory-msg" style="margin: 14px 0; font-size: 14px; color: #c62828; font-weight: bold; display:none;"></div>
+    <button class="btn-retry-flagged" id="btn-mandatory-retry" onclick="startMandatoryRetry()" style="display:none; background:#ea4335;">🔁 Làm lại câu sai (bắt buộc)</button>
+
     <div id="quiz-flagged-summary" style="margin: 10px 0; font-size: 14px; color: #f57c00; font-weight: bold;"></div>
     <button class="btn-retry-flagged" id="btn-retry-flagged" onclick="startFlaggedRetry()" style="display:none;">🚩 Làm lại câu đã đánh dấu</button>
     <br>
-    <button onclick="resetQuizView()" style="margin-top:10px;">Làm bài khác</button>
+    <button id="btn-new-quiz" onclick="resetQuizView()" style="margin-top:10px;">Làm bài khác</button>
+  </div>
+</div>
+
+<!-- ===== TAB TIẾN TRÌNH ===== -->
+<div id="view-stats" class="view-section" style="display:none;">
+  <div class="stats-summary-box" id="stats-summary-box"></div>
+  <div class="table-container" style="margin-top:0;">
+    <h3>📊 Lịch Sử Kiểm Tra</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Ngày giờ</th>
+          <th>Chủ đề</th>
+          <th>Kiểu KT</th>
+          <th>Điểm</th>
+          <th>%</th>
+        </tr>
+      </thead>
+      <tbody id="stats-table-body"></tbody>
+    </table>
+    <div style="text-align:center; margin-top:14px;">
+      <button class="delete-btn" onclick="clearQuizHistory()">🗑️ Xóa lịch sử</button>
+    </div>
   </div>
 </div>
 
@@ -579,28 +654,24 @@ async function initApp() {
 }
 
 function switchTab(tabName) {
-  document.getElementById("btn-tab-study").classList.remove("active");
-  document.getElementById("btn-tab-quiz").classList.remove("active");
-  document.getElementById("btn-tab-" + tabName).classList.add("active");
-  document.getElementById("view-study").style.display = "none";
-  document.getElementById("view-quiz").style.display = "none";
-  if (tabName === 'study') {
-    document.getElementById("view-study").style.display = "flex";
-  } else {
-    document.getElementById("view-quiz").style.display = "flex";
+  ["study", "quiz", "stats"].forEach(t => {
+    document.getElementById("btn-tab-" + t).classList.toggle("active", t === tabName);
+    document.getElementById("view-" + t).style.display = (t === tabName) ? "flex" : "none";
+  });
+  if (tabName === 'quiz') {
     resetQuizView();
+  } else if (tabName === 'stats') {
+    renderStatsView();
   }
 }
 
 function updateTopicDropdowns() {
   const topics = [...new Set(vocabulary.map(w => w.topic))];
 
-  const filterSelect = document.getElementById("topic-filter");
-  const curFilter = filterSelect.value;
-  filterSelect.innerHTML = '<option value="all">Tất cả chủ đề</option>';
-  topics.forEach(t => { filterSelect.innerHTML += `<option value="${t}">${t}</option>`; });
-  if (topics.includes(curFilter)) filterSelect.value = curFilter;
+  // Tab Học Từ: multi-select checkbox chủ đề
+  renderStudyTopicChecklist(topics);
 
+  // Tab Kiểm Tra: checkbox chủ đề (giữ nguyên cơ chế cũ)
   const checklist = document.getElementById("quiz-topic-checklist");
   const currentChecked = getCheckedTopics();
   checklist.innerHTML = "";
@@ -622,6 +693,70 @@ function toggleAllTopics() {
   const anyUnchecked = [...boxes].some(b => !b.checked);
   boxes.forEach(b => b.checked = anyUnchecked);
 }
+
+// ===================== MULTI-SELECT CHỦ ĐỀ (TAB HỌC TỪ) =====================
+function renderStudyTopicChecklist(topics) {
+  const checklist = document.getElementById("study-topic-checklist");
+  if (!checklist) return;
+  const currentChecked = getCheckedStudyTopics(); // đọc trạng thái cũ trước khi vẽ lại
+  const isFirstRender = checklist.dataset.rendered !== "1";
+  checklist.innerHTML = "";
+  topics.forEach(t => {
+    // Lần đầu vẽ: tick hết (mặc định "Tất cả"). Các lần sau: giữ nguyên lựa chọn cũ của người dùng.
+    const checked = isFirstRender ? "checked" : (currentChecked.includes(t) ? "checked" : "");
+    checklist.innerHTML += `<label>
+      <input type="checkbox" class="study-topic-cb" value="${t}" ${checked} onchange="onStudyTopicChange()"> ${t}
+    </label>`;
+  });
+  checklist.dataset.rendered = "1";
+  updateStudyMultiSelectLabel();
+}
+
+function getCheckedStudyTopics() {
+  const boxes = document.querySelectorAll(".study-topic-cb:checked");
+  return [...boxes].map(b => b.value);
+}
+
+function toggleAllStudyTopics() {
+  const boxes = document.querySelectorAll(".study-topic-cb");
+  const anyUnchecked = [...boxes].some(b => !b.checked);
+  boxes.forEach(b => b.checked = anyUnchecked);
+  onStudyTopicChange();
+}
+
+function onStudyTopicChange() {
+  updateStudyMultiSelectLabel();
+  applyFilter();
+}
+
+function updateStudyMultiSelectLabel() {
+  const btn = document.getElementById("topic-multiselect-btn");
+  if (!btn) return;
+  const checked = getCheckedStudyTopics();
+  const allBoxes = document.querySelectorAll(".study-topic-cb");
+  if (checked.length === 0) {
+    btn.textContent = "Không chọn chủ đề nào ▾";
+  } else if (checked.length === allBoxes.length) {
+    btn.textContent = "Tất cả chủ đề ▾";
+  } else if (checked.length === 1) {
+    btn.textContent = checked[0] + " ▾";
+  } else {
+    btn.textContent = `${checked.length} chủ đề đã chọn ▾`;
+  }
+}
+
+function toggleTopicDropdown() {
+  document.getElementById("topic-multiselect-panel").classList.toggle("active");
+}
+
+// Đóng panel khi click ra ngoài
+document.addEventListener("click", function(e) {
+  const wrap = document.getElementById("topic-multiselect-wrap");
+  const panel = document.getElementById("topic-multiselect-panel");
+  if (wrap && panel && !wrap.contains(e.target)) {
+    panel.classList.remove("active");
+  }
+});
 
 // ===================== XUẤT / NHẬP FILE =====================
 function exportJSON() {
@@ -755,8 +890,8 @@ function updateMasteredBtn() {
 
 // ===================== HỌC TỪ =====================
 function applyFilter() {
-  const selectedTopic = document.getElementById("topic-filter").value;
-  let base = selectedTopic === "all" ? [...vocabulary] : vocabulary.filter(w => w.topic === selectedTopic);
+  const selectedTopics = getCheckedStudyTopics();
+  let base = selectedTopics.length === 0 ? [] : vocabulary.filter(w => selectedTopics.includes(w.topic));
   if (hideMastered) base = base.filter(w => !w.mastered);
   filteredVocab = base;
   if (currentIndex >= filteredVocab.length) currentIndex = 0;
@@ -893,12 +1028,18 @@ function addWord() {
   if (vocabulary.some(w => w.en === en && w.ipa === ipa && w.vi === vi)) { alert(`Từ "${en}" (${ipa}) — ${vi} đã tồn tại!`); return; }
   vocabulary.push({ topic: tp, en, ipa, vi, mastered: false });
   saveToMemory(); updateTopicDropdowns();
+
+  // Tự động tick chọn chủ đề vừa thêm để thấy từ mới ngay
+  const cb = document.querySelector(`.study-topic-cb[value="${CSS.escape(tp)}"]`);
+  if (cb) cb.checked = true;
+  updateStudyMultiSelectLabel();
+
   document.getElementById("input-en").value = "";
   document.getElementById("input-ipa").value = "";
   document.getElementById("input-vi").value = "";
-  if (document.getElementById("topic-filter").value === "all" || document.getElementById("topic-filter").value === tp) {
-    applyFilter(); currentIndex = filteredVocab.length - 1; displayWord();
-  } else { applyFilter(); alert(`Đã thêm vào chủ đề "${tp}"`); }
+  applyFilter();
+  currentIndex = filteredVocab.length - 1;
+  displayWord();
 }
 
 function editWord(origIdx) {
@@ -988,9 +1129,19 @@ let quizQuestions = [];
 let currentQuizIndex = 0;
 let quizScore = 0;
 let isAnswered = false;
-let wrongQueue = [];
+let wrongQueue = [];       // các câu làm sai ở lượt đầu — dùng cho vòng làm lại BẮT BUỘC
+let retryQueue = [];       // hàng đợi đang chạy của vòng làm lại bắt buộc
+let quizPhase = 'test';    // 'test' = đang làm bài chính | 'retry' = đang bắt buộc làm lại câu sai
+let originalQuizTotal = 0; // tổng số câu của lượt làm bài chính (để hiển thị điểm cố định)
+let quizTopicsLabel = '';
 let isRetryRound = false;
 let flaggedQuestions = [];
+const QUIZ_MODE_LABELS = {
+  'en-to-vi': 'Anh → Việt',
+  'vi-to-en': 'Việt → Anh',
+  'vi-to-ipa': 'Việt → IPA',
+  'ipa-to-vi': 'IPA → Việt'
+};
 
 function selectQuizMode(mode) {
   quizMode = mode;
@@ -1037,15 +1188,33 @@ function startQuiz() {
   currentQuizIndex = 0;
   quizScore = 0;
   wrongQueue = [];
+  retryQueue = [];
   flaggedQuestions = [];
   isRetryRound = false;
+  quizPhase = 'test';
+  originalQuizTotal = quizQuestions.length;
+  quizTopicsLabel = checkedTopics.length === 0 ? "Tất cả" : checkedTopics.join(", ");
 
   document.getElementById("quiz-setup-area").style.display = "none";
   document.getElementById("quiz-result-area").style.display = "none";
   document.getElementById("quiz-play-area").style.display = "block";
   document.getElementById("quiz-retry-banner").style.display = "none";
+  document.getElementById("flag-btn").style.display = "inline-block";
 
   showQuizQuestion();
+}
+
+function exitQuiz() {
+  const msg = quizPhase === 'retry'
+    ? "Bạn chưa làm lại xong các câu sai. Thoát bây giờ sẽ bỏ dở phần làm lại này (điểm bài kiểm tra đã được lưu). Bạn có chắc muốn thoát?"
+    : "Thoát bài kiểm tra đang làm dở? Câu trả lời hiện tại sẽ không được tính.";
+  if (!confirm(msg)) return;
+  quizPhase = 'test';
+  quizQuestions = [];
+  wrongQueue = [];
+  retryQueue = [];
+  flaggedQuestions = [];
+  resetQuizView();
 }
 
 function buildOptionsPool(correctWord, field) {
@@ -1056,11 +1225,22 @@ function buildOptionsPool(correctWord, field) {
   return options;
 }
 
+function getCurrentQuizWord() {
+  return quizPhase === 'retry' ? retryQueue[0] : quizQuestions[currentQuizIndex];
+}
+
 function showQuizQuestion() {
   isAnswered = false;
-  const q = quizQuestions[currentQuizIndex];
-  document.getElementById("quiz-progress").innerText = `Câu ${currentQuizIndex + 1} / ${quizQuestions.length}`;
-  updateFlagBtn();
+  const q = getCurrentQuizWord();
+
+  if (quizPhase === 'retry') {
+    document.getElementById("quiz-progress").innerText = `🔁 Bắt buộc làm lại — còn ${retryQueue.length} câu`;
+    document.getElementById("flag-btn").style.display = "none";
+  } else {
+    document.getElementById("quiz-progress").innerText = `Câu ${currentQuizIndex + 1} / ${quizQuestions.length}`;
+    document.getElementById("flag-btn").style.display = "inline-block";
+    updateFlagBtn();
+  }
 
   const displayEl = document.getElementById("quiz-question-display");
   let optionField;
@@ -1097,17 +1277,36 @@ function showQuizQuestion() {
 function selectAnswer(chosen, correct, btnEl) {
   if (isAnswered) return;
   isAnswered = true;
-  const buttons = document.querySelectorAll(".quiz-option-btn");
-  buttons.forEach(b => {
-    if (b.textContent === correct) b.classList.add("correct");
-    else if (b === btnEl) b.classList.add("wrong");
-  });
+  const isCorrect = chosen === correct;
 
+  // Đúng thì tô xanh; sai chỉ tô đỏ ô đã chọn — KHÔNG lộ đáp án đúng
+  if (isCorrect) {
+    btnEl.classList.add("correct");
+  } else {
+    btnEl.classList.add("wrong");
+  }
+  document.querySelectorAll(".quiz-option-btn").forEach(b => b.disabled = true);
+
+  if (quizPhase === 'retry') {
+    const q = retryQueue[0];
+    setTimeout(() => {
+      retryQueue.shift();
+      if (!isCorrect) retryQueue.push(q); // sai thì đưa lại vào cuối hàng đợi, làm lại cho đến khi đúng
+      if (retryQueue.length === 0) {
+        finishMandatoryRetry();
+      } else {
+        showQuizQuestion();
+      }
+    }, 900);
+    return;
+  }
+
+  // Phase 'test' (lượt làm bài chính)
   const q = quizQuestions[currentQuizIndex];
-  if (chosen === correct) {
+  if (isCorrect) {
     quizScore++;
   } else {
-    if (!isRetryRound) wrongQueue.push(q);
+    wrongQueue.push(q);
   }
 
   setTimeout(() => {
@@ -1121,7 +1320,7 @@ function selectAnswer(chosen, correct, btnEl) {
 }
 
 function speakQuizWord() {
-  const q = quizQuestions[currentQuizIndex];
+  const q = getCurrentQuizWord();
   let u = new SpeechSynthesisUtterance(q.en);
   u.lang = 'en-US'; window.speechSynthesis.speak(u);
 }
@@ -1129,11 +1328,11 @@ function speakQuizWord() {
 function finishQuiz() {
   document.getElementById("quiz-play-area").style.display = "none";
   document.getElementById("quiz-result-area").style.display = "block";
-  document.getElementById("quiz-final-score").innerText = `${quizScore} / ${quizQuestions.length}`;
+  document.getElementById("quiz-final-score").innerText = `${quizScore} / ${originalQuizTotal}`;
+
+  const percent = Math.round((quizScore / originalQuizTotal) * 100);
 
   const hsKey = "myAppEnQuizHighScore";
-  const prevHigh = parseInt(localStorage.getItem(hsKey)) || 0;
-  const percent = Math.round((quizScore / quizQuestions.length) * 100);
   const prevPercent = parseInt(localStorage.getItem(hsKey + "_pct")) || 0;
   const highScoreEl = document.getElementById("quiz-high-score");
   if (percent > prevPercent) {
@@ -1142,6 +1341,74 @@ function finishQuiz() {
   } else {
     highScoreEl.innerText = `Kỷ lục hiện tại: ${prevPercent}%`;
   }
+
+  // Ghi lại vào lịch sử / bảng điểm — chấm điểm theo lượt làm bài CHÍNH (trước khi làm lại)
+  saveQuizHistoryEntry({
+    date: new Date().toLocaleString('vi-VN'),
+    topic: quizTopicsLabel,
+    modeLabel: QUIZ_MODE_LABELS[quizMode] || quizMode,
+    score: quizScore,
+    total: originalQuizTotal,
+    percent: percent
+  });
+
+  const mandatoryMsg = document.getElementById("quiz-mandatory-msg");
+  const mandatoryBtn = document.getElementById("btn-mandatory-retry");
+  const newQuizBtn = document.getElementById("btn-new-quiz");
+  const titleEl = document.getElementById("quiz-result-title");
+
+  if (wrongQueue.length > 0) {
+    titleEl.textContent = "Đã xong lượt đầu";
+    mandatoryMsg.style.display = "block";
+    mandatoryMsg.innerText = `⚠️ Bạn làm sai ${wrongQueue.length} câu. Cần làm lại cho đúng hết trước khi kết thúc bài.`;
+    mandatoryBtn.style.display = "inline-block";
+    newQuizBtn.disabled = true;
+    newQuizBtn.title = "Hãy làm lại các câu sai trước";
+  } else {
+    titleEl.textContent = "Hoàn thành! 🎉";
+    mandatoryMsg.style.display = "none";
+    mandatoryBtn.style.display = "none";
+    newQuizBtn.disabled = false;
+    newQuizBtn.title = "";
+  }
+
+  const flagSummary = document.getElementById("quiz-flagged-summary");
+  const retryBtn = document.getElementById("btn-retry-flagged");
+  if (flaggedQuestions.length > 0 && wrongQueue.length === 0) {
+    flagSummary.innerText = `🚩 Bạn đã đánh dấu ${flaggedQuestions.length} câu để làm lại.`;
+    retryBtn.style.display = "inline-block";
+  } else {
+    flagSummary.innerText = "";
+    retryBtn.style.display = "none";
+  }
+}
+
+function startMandatoryRetry() {
+  if (wrongQueue.length === 0) return;
+  retryQueue = [...wrongQueue];
+  quizPhase = 'retry';
+
+  document.getElementById("quiz-result-area").style.display = "none";
+  document.getElementById("quiz-play-area").style.display = "block";
+  document.getElementById("quiz-retry-banner").style.display = "block";
+  document.getElementById("quiz-retry-banner").innerText = `🔁 Bắt buộc làm lại cho đúng — còn ${retryQueue.length} câu`;
+
+  showQuizQuestion();
+}
+
+function finishMandatoryRetry() {
+  quizPhase = 'test';
+  document.getElementById("quiz-play-area").style.display = "none";
+  document.getElementById("quiz-result-area").style.display = "block";
+  document.getElementById("quiz-retry-banner").style.display = "none";
+
+  document.getElementById("quiz-result-title").textContent = "Hoàn thành! 🎉";
+  document.getElementById("quiz-mandatory-msg").style.display = "none";
+  document.getElementById("btn-mandatory-retry").style.display = "none";
+
+  const newQuizBtn = document.getElementById("btn-new-quiz");
+  newQuizBtn.disabled = false;
+  newQuizBtn.title = "";
 
   const flagSummary = document.getElementById("quiz-flagged-summary");
   const retryBtn = document.getElementById("btn-retry-flagged");
@@ -1152,6 +1419,8 @@ function finishQuiz() {
     flagSummary.innerText = "";
     retryBtn.style.display = "none";
   }
+
+  wrongQueue = [];
 }
 
 function startFlaggedRetry() {
@@ -1160,12 +1429,15 @@ function startFlaggedRetry() {
   currentQuizIndex = 0;
   quizScore = 0;
   isRetryRound = true;
+  quizPhase = 'test';
+  originalQuizTotal = quizQuestions.length;
   flaggedQuestions = [];
 
   document.getElementById("quiz-result-area").style.display = "none";
   document.getElementById("quiz-play-area").style.display = "block";
   document.getElementById("quiz-retry-banner").style.display = "block";
   document.getElementById("quiz-retry-banner").innerText = `🚩 Đang làm lại ${quizQuestions.length} câu đã đánh dấu`;
+  document.getElementById("flag-btn").style.display = "inline-block";
 
   showQuizQuestion();
 }
@@ -1175,6 +1447,73 @@ function resetQuizView() {
   document.getElementById("quiz-play-area").style.display = "none";
   document.getElementById("quiz-result-area").style.display = "none";
   updateTopicDropdowns();
+}
+
+// ===================== LỊCH SỬ / BẢNG ĐIỂM =====================
+const QUIZ_HISTORY_KEY = "myAppEnQuizHistory";
+
+function loadQuizHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(QUIZ_HISTORY_KEY)) || [];
+  } catch { return []; }
+}
+
+function saveQuizHistoryEntry(entry) {
+  const history = loadQuizHistory();
+  history.unshift(entry);
+  if (history.length > 50) history.length = 50; // chỉ giữ 50 lần gần nhất
+  localStorage.setItem(QUIZ_HISTORY_KEY, JSON.stringify(history));
+}
+
+function clearQuizHistory() {
+  if (!confirm("Xóa toàn bộ lịch sử kiểm tra? Không thể hoàn tác.")) return;
+  localStorage.removeItem(QUIZ_HISTORY_KEY);
+  renderStatsView();
+}
+
+function pctColor(pct) {
+  if (pct >= 80) return "#34a853";
+  if (pct >= 50) return "#fbbc05";
+  return "#ea4335";
+}
+
+function renderStatsView() {
+  const history = loadQuizHistory();
+  const summaryBox = document.getElementById("stats-summary-box");
+  const tbody = document.getElementById("stats-table-body");
+
+  if (history.length === 0) {
+    summaryBox.innerHTML = `<div class="stats-card"><div class="stats-value">–</div><div class="stats-label">Chưa có lần kiểm tra nào</div></div>`;
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#888;">Làm bài kiểm tra đầu tiên để bắt đầu theo dõi tiến trình nhé!</td></tr>`;
+    return;
+  }
+
+  const total = history.length;
+  const avg = Math.round(history.reduce((s, h) => s + h.percent, 0) / total);
+  const best = Math.max(...history.map(h => h.percent));
+  const last = history[0].percent;
+
+  summaryBox.innerHTML = `
+    <div class="stats-card"><div class="stats-value">${total}</div><div class="stats-label">Lần kiểm tra</div></div>
+    <div class="stats-card"><div class="stats-value" style="color:${pctColor(avg)}">${avg}%</div><div class="stats-label">Điểm trung bình</div></div>
+    <div class="stats-card"><div class="stats-value" style="color:${pctColor(best)}">${best}%</div><div class="stats-label">Cao nhất</div></div>
+    <div class="stats-card"><div class="stats-value" style="color:${pctColor(last)}">${last}%</div><div class="stats-label">Gần nhất</div></div>
+  `;
+
+  tbody.innerHTML = "";
+  history.forEach(h => {
+    const color = pctColor(h.percent);
+    tbody.innerHTML += `<tr>
+      <td>${h.date}</td>
+      <td><span class="topic-badge">${h.topic}</span></td>
+      <td>${h.modeLabel}</td>
+      <td>${h.score} / ${h.total}</td>
+      <td>
+        <span class="pct-badge" style="background:${color};">${h.percent}%</span>
+        <div class="score-bar-wrap"><div class="score-bar-fill" style="width:${h.percent}%; background:${color};"></div></div>
+      </td>
+    </tr>`;
+  });
 }
 
 // ===================== KHỞI ĐỘNG =====================
