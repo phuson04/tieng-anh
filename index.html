@@ -515,7 +515,9 @@ if (!vocabulary || vocabulary.length === 0) {
     if (w.mastered === undefined) w.mastered = false;
     return w;
   });
-  saveToMemory();
+  // LƯU Ý: KHÔNG gọi saveToMemory() ở đây nữa.
+  // Trước đây nó tự đẩy dữ liệu local (có thể cũ) lên Firestore ngay khi mở trang,
+  // ghi đè mất dữ liệu mới hơn từ máy khác trước khi kịp tải cloud về (initApp bên dưới).
 }
 
 let filteredVocab = [...vocabulary];
