@@ -285,6 +285,13 @@ th { background-color: #0d9488; color: white; }
 </head>
 <body>
 
+<div id="sync-bar" style="
+  position: fixed; top: 0; left: 0; right: 0; z-index: 999;
+  background: #0d9488; color: white; text-align: center;
+  padding: 8px; font-size: 13px; font-weight: bold;
+  display: none; transition: 0.3s;">
+</div>
+
 <div class="nav-bar">
   <button class="nav-btn active" id="btn-tab-study" onclick="switchTab('study')">📚 Học Từ</button>
   <button class="nav-btn" id="btn-tab-quiz" onclick="switchTab('quiz')">✍️ Kiểm Tra</button>
@@ -444,6 +451,45 @@ study  &#712;st&#652;di  Học tập  Unit 2</code>
   </div>
 </div>
 
+<!-- Firebase SDK (compat version - hoạt động trong mọi môi trường) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCnQVIcUUoPaLa7svtaZkwoMhdheRhnvMs",
+  authDomain: "tieng-anh-app-9c757.firebaseapp.com",
+  projectId: "tieng-anh-app-9c757",
+  storageBucket: "tieng-anh-app-9c757.firebasestorage.app",
+  messagingSenderId: "883031325154",
+  appId: "1:883031325154:web:84ac7189fbd899205d61bb"
+};
+
+try {
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  window._fbSave = async function(data) {
+    try {
+      await db.collection("vocab").doc("main").set({ list: data });
+    } catch(e) { console.error("Firebase save error:", e); }
+  };
+
+  window._fbLoad = async function() {
+    try {
+      const snap = await db.collection("vocab").doc("main").get();
+      if (snap.exists) return snap.data().list;
+    } catch(e) { console.error("Firebase load error:", e); }
+    return null;
+  };
+
+  window._fbReady = true;
+  document.dispatchEvent(new Event("firebase-ready"));
+} catch(e) {
+  console.warn("Firebase không khởi động được:", e);
+  document.dispatchEvent(new Event("firebase-ready"));
+}
+</script>
+
 <script>
 // ===================== BẢO MẬT — khai báo sớm =====================
 // Đổi mật khẩu này trước khi dùng thật. Vì file này chạy hoàn toàn ở client
@@ -477,11 +523,53 @@ let currentIndex = 0;
 let hideMastered = false;
 let quizMode = 'en-to-vi';
 
-function saveToMemory() {
-  localStorage.setItem("myAppVocabEN", JSON.stringify(vocabulary));
+// ===================== SYNC =====================
+function showSyncBar(msg, color = '#0d9488') {
+  const bar = document.getElementById("sync-bar");
+  bar.style.background = color;
+  bar.innerText = msg;
+  bar.style.display = "block";
 }
 
-function initApp() {
+function hideSyncBar() {
+  setTimeout(() => { document.getElementById("sync-bar").style.display = "none"; }, 2000);
+}
+
+function saveToMemory() {
+  localStorage.setItem("myAppVocabEN", JSON.stringify(vocabulary));
+
+  // Đồng bộ lên Firebase nếu đã sẵn sàng
+  if (window._fbSave) {
+    showSyncBar("☁️ Đang lưu lên cloud...");
+    window._fbSave(vocabulary).then(() => {
+      showSyncBar("✅ Đã đồng bộ cloud", "#34a853");
+      hideSyncBar();
+    }).catch(() => {
+      showSyncBar("⚠️ Lưu cloud thất bại (đã lưu local)", "#f57c00");
+      hideSyncBar();
+    });
+  }
+}
+
+// Load dữ liệu từ Firebase khi khởi động
+async function initApp() {
+  showSyncBar("☁️ Đang tải dữ liệu từ cloud...");
+  if (window._fbLoad) {
+    const cloudData = await window._fbLoad();
+    if (cloudData && cloudData.length > 0) {
+      vocabulary = cloudData.map(w => {
+        if (!w.topic) w.topic = "Chung";
+        if (w.mastered === undefined) w.mastered = false;
+        return w;
+      });
+      localStorage.setItem("myAppVocabEN", JSON.stringify(vocabulary));
+      showSyncBar("✅ Đã tải dữ liệu từ cloud", "#34a853");
+    } else {
+      showSyncBar("📱 Dùng dữ liệu local", "#888");
+    }
+  }
+  hideSyncBar();
+
   filteredVocab = [...vocabulary];
   updateTopicDropdowns();
   applyFilter();
