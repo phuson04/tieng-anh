@@ -399,20 +399,25 @@ th { background-color: #0d9488; color: white; }
   </div>
 
   <div class="table-container">
-    <h3>Danh Sách Từ Vựng</h3>
-    <table>
-      <thead>
-        <tr>
-          <th style="width: 4%;">STT</th>
-          <th style="width: 12%;">Chủ đề</th>
-          <th style="width: 18%;">Từ tiếng Anh</th>
-          <th style="width: 18%;">IPA</th>
-          <th style="width: 24%;">Tiếng Việt</th>
-          <th style="width: 24%;">Thao tác</th>
-        </tr>
-      </thead>
-      <tbody id="table-body"></tbody>
-    </table>
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <h3 style="margin:0;">Danh Sách Từ Vựng</h3>
+      <button class="action-btn" id="btn-toggle-table" style="background:#0d9488; color:white;" onclick="toggleVocabTable()">📋 Xem danh sách từ</button>
+    </div>
+    <div id="vocab-table-wrapper" style="display:none; margin-top:14px;">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 4%;">STT</th>
+            <th style="width: 12%;">Chủ đề</th>
+            <th style="width: 18%;">Từ tiếng Anh</th>
+            <th style="width: 18%;">IPA</th>
+            <th style="width: 24%;">Tiếng Việt</th>
+            <th style="width: 24%;">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
   </div>
 
 </div>
@@ -595,6 +600,14 @@ if (!vocabulary || vocabulary.length === 0) {
   // ghi đè mất dữ liệu mới hơn từ máy khác trước khi kịp tải cloud về (initApp bên dưới).
 }
 
+// An toàn: nếu đóng tab/thoát trang đúng lúc đang chờ gộp lưu (trong 800ms), ép lưu ngay
+window.addEventListener("beforeunload", () => {
+  if (fbSaveTimer && window._fbSave) {
+    clearTimeout(fbSaveTimer);
+    window._fbSave(vocabulary);
+  }
+});
+
 let filteredVocab = [...vocabulary];
 let currentIndex = 0;
 let hideMastered = false;
@@ -612,19 +625,27 @@ function hideSyncBar() {
   setTimeout(() => { document.getElementById("sync-bar").style.display = "none"; }, 2000);
 }
 
+let fbSaveTimer = null;
+
 function saveToMemory() {
+  // Lưu local ngay lập tức — rẻ, không lo mất dữ liệu nếu đóng tab đột ngột
   localStorage.setItem("myAppVocabEN", JSON.stringify(vocabulary));
 
-  // Đồng bộ lên Firebase nếu đã sẵn sàng
+  // Đồng bộ Firebase thì GỘP LẠI: nếu bấm liên tiếp nhiều thao tác trong lúc gõ/tick nhanh,
+  // chỉ thực sự gửi lên cloud sau khi dừng thao tác 800ms — tránh gửi mạng liên tục gây giật.
   if (window._fbSave) {
-    showSyncBar("☁️ Đang lưu lên cloud...");
-    window._fbSave(vocabulary).then(() => {
-      showSyncBar("✅ Đã đồng bộ cloud", "#34a853");
-      hideSyncBar();
-    }).catch(() => {
-      showSyncBar("⚠️ Lưu cloud thất bại (đã lưu local)", "#f57c00");
-      hideSyncBar();
-    });
+    showSyncBar("⏳ Đang chờ đồng bộ...", "#888");
+    clearTimeout(fbSaveTimer);
+    fbSaveTimer = setTimeout(() => {
+      showSyncBar("☁️ Đang lưu lên cloud...");
+      window._fbSave(vocabulary).then(() => {
+        showSyncBar("✅ Đã đồng bộ cloud", "#34a853");
+        hideSyncBar();
+      }).catch(() => {
+        showSyncBar("⚠️ Lưu cloud thất bại (đã lưu local)", "#f57c00");
+        hideSyncBar();
+      });
+    }, 800);
   }
 }
 
@@ -933,7 +954,17 @@ function speakFlashcardWord(event) {
   u.lang = 'en-US'; window.speechSynthesis.speak(u);
 }
 
+let vocabTableVisible = false;
+
+function toggleVocabTable() {
+  vocabTableVisible = !vocabTableVisible;
+  document.getElementById("vocab-table-wrapper").style.display = vocabTableVisible ? "block" : "none";
+  document.getElementById("btn-toggle-table").textContent = vocabTableVisible ? "📋 Ẩn danh sách từ" : "📋 Xem danh sách từ";
+  if (vocabTableVisible) renderTable(); // chỉ vẽ bảng khi thật sự mở ra — tránh giật với kho từ lớn
+}
+
 function renderTable() {
+  if (!vocabTableVisible) return; // bảng đang ẩn thì không tốn công vẽ lại
   const tbody = document.getElementById("table-body");
   tbody.innerHTML = "";
   filteredVocab.forEach((w, i) => {
