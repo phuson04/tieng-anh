@@ -109,16 +109,28 @@ body {
 /* MULTI-SELECT CHỦ ĐỀ (tab Học Từ) */
 .multi-select-wrap { position: relative; }
 .multi-select-btn {
-  padding: 6px 14px; font-size: 15px; font-weight: bold; border-radius: 6px;
-  border: 1px solid #0d9488; background: white; cursor: pointer; color: #333;
-  min-width: 170px; text-align: left;
+  padding: 10px 18px; font-size: 17px; font-weight: bold; border-radius: 8px;
+  border: 2px solid #0d9488; background: white; cursor: pointer; color: #333;
+  min-width: 190px; text-align: left;
 }
 .multi-select-panel {
   display: none; position: absolute; top: 115%; left: 0; z-index: 60;
-  background: white; border: 1px solid #ccc; border-radius: 10px; padding: 12px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.15); min-width: 230px;
+  background: white; border: 1px solid #ccc; border-radius: 12px; padding: 18px;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.18); width: 320px; max-width: 92vw;
 }
 .multi-select-panel.active { display: block; }
+.multi-select-panel .topic-select-all {
+  font-size: 16px; margin-bottom: 10px;
+}
+.multi-select-panel .topic-checkbox-list {
+  width: 100%; max-height: 320px; gap: 4px; padding: 6px;
+}
+.multi-select-panel .topic-checkbox-list label {
+  font-size: 18px; padding: 10px 10px; gap: 12px;
+}
+.multi-select-panel .topic-checkbox-list input[type=checkbox] {
+  width: 22px; height: 22px;
+}
 .mastered-filter-btn {
   padding: 6px 14px; font-size: 13px; font-weight: bold; border: 2px solid #34a853;
   border-radius: 20px; cursor: pointer; background: white; color: #34a853; transition: 0.2s;
@@ -363,6 +375,8 @@ th { background-color: #0d9488; color: white; }
     <button class="action-btn btn-import" onclick="checkImportClick()">📂 Nhập File</button>
     <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importJSON(event)">
     <button class="action-btn btn-bulk" onclick="openBulkModal()">⚡ Thêm Hàng Loạt</button>
+    <button class="action-btn" style="background-color:#ff7043; color:white;" onclick="checkBulkDeleteClick()">🧹 Xóa Hàng Loạt</button>
+    <input type="file" id="bulk-delete-file" accept=".json" style="display:none;" onchange="bulkDeleteByFile(event)">
   </div>
 
   <div class="filter-box">
@@ -1039,6 +1053,33 @@ function doLock() {
 function checkImportClick() {
   if (!requireUnlock()) return;
   document.getElementById("import-file").click();
+}
+
+function checkBulkDeleteClick() {
+  if (!requireUnlock()) return;
+  document.getElementById("bulk-delete-file").click();
+}
+
+function bulkDeleteByFile(event) {
+  const file = event.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const list = JSON.parse(e.target.result);
+      if (!Array.isArray(list)) { alert("File không hợp lệ (cần là 1 mảng JSON)!"); return; }
+
+      // Khớp chính xác theo en + ipa + vi — KHÔNG quan tâm chủ đề hiện tại của từ đó
+      const keys = new Set(list.map(w => `${w.en}|||${w.ipa}|||${w.vi}`));
+      const before = vocabulary.length;
+      vocabulary = vocabulary.filter(w => !keys.has(`${w.en}|||${w.ipa}|||${w.vi}`));
+      const removed = before - vocabulary.length;
+
+      saveToMemory(); updateTopicDropdowns(); applyFilter();
+      alert(`🧹 Đã xóa ${removed} từ khớp với file (trong tổng ${list.length} mục file đưa vào).`);
+    } catch { alert("Lỗi đọc file JSON!"); }
+  };
+  reader.readAsText(file);
+  event.target.value = "";
 }
 
 function requireUnlock() {
