@@ -431,6 +431,7 @@ th { background-color: #0d9488; color: white; }
         </thead>
         <tbody id="table-body"></tbody>
       </table>
+      <div id="table-load-more-wrap" style="display:none; text-align:center; margin-top:14px;"></div>
     </div>
   </div>
 
@@ -709,13 +710,13 @@ function updateTopicDropdowns() {
   // Tab Kiểm Tra: checkbox chủ đề (giữ nguyên cơ chế cũ)
   const checklist = document.getElementById("quiz-topic-checklist");
   const currentChecked = getCheckedTopics();
-  checklist.innerHTML = "";
-  topics.forEach(t => {
+  const rows = topics.map(t => {
     const checked = currentChecked.length === 0 || currentChecked.includes(t) ? "checked" : "";
-    checklist.innerHTML += `<label>
+    return `<label>
       <input type="checkbox" class="quiz-topic-cb" value="${t}" ${checked}> ${t}
     </label>`;
   });
+  checklist.innerHTML = rows.join("");
 }
 
 function getCheckedTopics() {
@@ -735,14 +736,14 @@ function renderStudyTopicChecklist(topics) {
   if (!checklist) return;
   const currentChecked = getCheckedStudyTopics(); // đọc trạng thái cũ trước khi vẽ lại
   const isFirstRender = checklist.dataset.rendered !== "1";
-  checklist.innerHTML = "";
-  topics.forEach(t => {
+  const rows = topics.map(t => {
     // Lần đầu vẽ: tick hết (mặc định "Tất cả"). Các lần sau: giữ nguyên lựa chọn cũ của người dùng.
     const checked = isFirstRender ? "checked" : (currentChecked.includes(t) ? "checked" : "");
-    checklist.innerHTML += `<label>
+    return `<label>
       <input type="checkbox" class="study-topic-cb" value="${t}" ${checked} onchange="onStudyTopicChange()"> ${t}
     </label>`;
   });
+  checklist.innerHTML = rows.join("");
   checklist.dataset.rendered = "1";
   updateStudyMultiSelectLabel();
 }
@@ -761,6 +762,7 @@ function toggleAllStudyTopics() {
 
 function onStudyTopicChange() {
   updateStudyMultiSelectLabel();
+  tableRenderCount = 100; // đổi chủ đề đang xem thì vẽ lại bảng từ đầu
   applyFilter();
 }
 
@@ -892,6 +894,7 @@ function toggleHideMastered() {
   const btn = document.getElementById("btn-hide-mastered");
   if (hideMastered) { btn.classList.add("active"); btn.textContent = "👁 Hiện từ đã thuộc"; }
   else { btn.classList.remove("active"); btn.textContent = "🙈 Ẩn từ đã thuộc"; }
+  tableRenderCount = 100; // đổi bộ lọc thì vẽ lại bảng từ đầu
   applyFilter();
 }
 
@@ -969,20 +972,35 @@ function speakFlashcardWord(event) {
 }
 
 let vocabTableVisible = false;
+let tableRenderCount = 100; // phân trang: chỉ vẽ 100 dòng mỗi lần, tránh vẽ hết cả nghìn dòng cùng lúc
 
 function toggleVocabTable() {
   vocabTableVisible = !vocabTableVisible;
   document.getElementById("vocab-table-wrapper").style.display = vocabTableVisible ? "block" : "none";
   document.getElementById("btn-toggle-table").textContent = vocabTableVisible ? "📋 Ẩn danh sách từ" : "📋 Xem danh sách từ";
-  if (vocabTableVisible) renderTable(); // chỉ vẽ bảng khi thật sự mở ra — tránh giật với kho từ lớn
+  if (vocabTableVisible) {
+    tableRenderCount = 100; // mỗi lần mở lại bảng, bắt đầu từ 100 dòng đầu cho nhẹ
+    renderTable();
+  }
+}
+
+function loadMoreTableRows() {
+  tableRenderCount += 100;
+  renderTable();
 }
 
 function renderTable() {
   if (!vocabTableVisible) return; // bảng đang ẩn thì không tốn công vẽ lại
-  const tbody = document.getElementById("table-body");
-  tbody.innerHTML = "";
-  filteredVocab.forEach((w, i) => {
-    const origIdx = vocabulary.indexOf(w);
+
+  // Tra cứu chỉ số gốc bằng Map (O(1)/dòng) thay vì vocabulary.indexOf(w) (O(n)/dòng, rất chậm khi kho từ lớn)
+  const idxMap = new Map();
+  vocabulary.forEach((w, i) => idxMap.set(w, i));
+
+  const visibleRows = filteredVocab.slice(0, tableRenderCount);
+  const rowsHtml = []; // gom vào mảng, join 1 lần duy nhất thay vì += từng dòng (tránh O(n²))
+
+  visibleRows.forEach((w, i) => {
+    const origIdx = idxMap.get(w);
     const masteredClass = w.mastered ? ' class="mastered-row"' : '';
     const masteredIcon = w.mastered ? '<span class="mastered-icon" title="Đã thuộc">✅</span> ' : '';
     const actionBtns = isUnlocked ? `
@@ -993,15 +1011,28 @@ function renderTable() {
       <button class="delete-btn" onclick="deleteWord(${origIdx})">Xóa</button>
     ` : `<span style="font-size:12px;color:#aaa;">🔒 Khóa</span>`;
 
-    tbody.innerHTML += `<tr${masteredClass}>
+    rowsHtml.push(`<tr${masteredClass}>
       <td>${i + 1}</td>
       <td><span class="topic-badge">${w.topic}</span></td>
       <td style="font-weight:bold;">${masteredIcon}${w.en}</td>
       <td>${w.ipa}</td>
       <td>${w.vi}</td>
       <td><div class="table-actions">${actionBtns}</div></td>
-    </tr>`;
+    </tr>`);
   });
+
+  document.getElementById("table-body").innerHTML = rowsHtml.join("");
+
+  // Nút "Xem thêm" nếu còn dòng chưa vẽ
+  const moreWrap = document.getElementById("table-load-more-wrap");
+  const remaining = filteredVocab.length - visibleRows.length;
+  if (remaining > 0) {
+    moreWrap.style.display = "block";
+    moreWrap.innerHTML = `<button class="next-btn" onclick="loadMoreTableRows()">Xem thêm ${Math.min(100, remaining)} từ (còn ${remaining})</button>`;
+  } else {
+    moreWrap.style.display = "none";
+    moreWrap.innerHTML = "";
+  }
 }
 
 function toggleMasteredByIndex(origIdx) {
@@ -1572,10 +1603,9 @@ function renderStatsView() {
     <div class="stats-card"><div class="stats-value" style="color:${pctColor(last)}">${last}%</div><div class="stats-label">Gần nhất</div></div>
   `;
 
-  tbody.innerHTML = "";
-  history.forEach(h => {
+  const rows = history.map(h => {
     const color = pctColor(h.percent);
-    tbody.innerHTML += `<tr>
+    return `<tr>
       <td>${h.date}</td>
       <td><span class="topic-badge">${h.topic}</span></td>
       <td>${h.modeLabel}</td>
@@ -1586,6 +1616,7 @@ function renderStatsView() {
       </td>
     </tr>`;
   });
+  tbody.innerHTML = rows.join("");
 }
 
 // ===================== KHỞI ĐỘNG =====================
