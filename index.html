@@ -633,6 +633,9 @@ study  &#712;st&#652;di  Học tập  Unit 2</code>
       <input type="file" id="zh-import-file" accept=".json,application/json" hidden>
       <button type="button" id="zh-bulk-open" class="action-btn btn-bulk">Thêm hàng loạt</button>
       <button type="button" id="zh-remove-test" class="action-btn" style="background:#d95d39">Xóa toàn bộ topic test</button>
+      <button type="button" id="zh-delete-by-file" class="action-btn" style="background:#c2410c" title="Chọn file JSON để xóa những từ Chinese khớp Hán tự, Pinyin và nghĩa; không xét chủ đề">Xóa hàng loạt (JSON)</button>
+      <input type="file" id="zh-delete-by-file-input" accept=".json,application/json" hidden>
+      <button type="button" id="zh-delete-all" class="action-btn" style="background:#b91c1c" title="Xóa toàn bộ từ vựng Chinese, không xóa English hoặc lịch sử Quiz">Xóa toàn bộ từ Chinese</button>
       <button type="button" id="zh-export-backup" class="action-btn" style="background:#64748b">Sao lưu Chinese đầy đủ</button>
       <button type="button" id="zh-import-backup" class="action-btn" style="background:#64748b">Khôi phục bản sao</button>
       <input type="file" id="zh-backup-file" accept=".json,application/json" hidden>
@@ -1857,6 +1860,7 @@ initApp();
   let quizMode='hanzi-to-vi', questionList=[], questionIndex=0, quizScore=0, quizPhase='main';
   let retryList=[], missed=[], flagged=[], quizReview=false, originalTotal=0, quizTopicsLabel='Tất cả', answered=false;
   let ready=false, cloudTimer=null, cloudDB=null, cloudAvailable=false, lastWrittenHash='';
+  let deletingWords=false, inFlightCloudWrite=Promise.resolve();
   let syncMeta=safeRead(STORAGE.meta,{})||{};
   let zhHistory=safeRead(STORAGE.history,[]); if(!Array.isArray(zhHistory))zhHistory=[];
   let zhBest=Number(safeRead(STORAGE.best,0))||0;
@@ -1871,7 +1875,7 @@ initApp();
     scheduleCloudSave();
   }
   function scheduleCloudSave() {
-    if(!ready)return;
+    if(!ready||deletingWords)return;
     if(!cloudAvailable){setStatus('Đã lưu trên máy. Cloud chưa khả dụng; dữ liệu Chinese chưa được đồng bộ.',true);return;}
     clearTimeout(cloudTimer);
     setStatus('Đã lưu trên máy · Chờ đồng bộ Chinese…');
@@ -1882,7 +1886,9 @@ initApp();
     const snap=vocabulary.map(w=>({...w})), snapHash=snapshotHash(snap);
     if(snapHash===lastWrittenHash){setStatus('Chinese đã đồng bộ · Lịch sử Quiz lưu trên máy');return;}
     try {
-      await cloudDB.collection('vocab_zh').doc('main').set({list:snap,updatedAt:Date.now(),version:1});
+      const operation=cloudDB.collection('vocab_zh').doc('main').set({list:snap,updatedAt:Date.now(),version:1});
+      inFlightCloudWrite=operation;
+      await operation;
       lastWrittenHash=snapHash;syncMeta.lastSyncedHash=snapHash;setMeta();
       setStatus('Đã đồng bộ từ Chinese · Lịch sử Quiz lưu trên máy');
       if(snapshotHash(vocabulary)!==snapHash)scheduleCloudSave();
@@ -1952,7 +1958,7 @@ initApp();
     $('zh-data-actions').classList.toggle('zh-edit-locked',!unlocked);
     renderTable();
   }
-  function checkUnlock(){if(unlocked)return true;alert('Vui lòng mở khóa để chỉnh sửa hoặc đánh dấu đã thuộc.');return false;}
+  function checkUnlock(){if(deletingWords){alert('Đang chờ xác nhận xóa từ Firebase. Vui lòng kiểm tra trạng thái đồng bộ trước khi tiếp tục.');return false;}if(unlocked)return true;alert('Vui lòng mở khóa để chỉnh sửa hoặc đánh dấu đã thuộc.');return false;}
   function topics(){return [...new Set(vocabulary.map(w=>w.topic))].sort((a,b)=>a.localeCompare(b,'vi'));}
   function refreshSelect(id,selected){
     const el=$(id), old=selected??el.value;el.replaceChildren();
@@ -2037,6 +2043,68 @@ initApp();
   function removeTest(){if(!checkUnlock())return;const n=vocabulary.filter(w=>w.topic==='test').length;if(!n){alert('Không có từ thuộc topic test.');return;}
     if(!confirm(`Xóa toàn bộ ${n} từ có topic "test"? Có thể sao lưu trước khi xóa.`))return;
     vocabulary=vocabulary.filter(w=>w.topic!=='test');localChange();
+  }
+  // Xóa Chinese an toàn: luôn sao lưu dữ liệu cũ, ghi cloud và rollback nếu lỗi.
+  // Không sửa lịch sử Quiz hoặc bất cứ khóa/collection nào của English.
+  async function commitChineseRemoval(nextWords, label) {
+    if(deletingWords||!ready||!checkUnlock())return;
+    if(!cloudAvailable){
+      alert('Firebase Chinese hiện không khả dụng. Để tránh xóa trên một máy rồi dữ liệu cũ quay lại từ cloud, hãy kết nối mạng và mở lại trang trước khi xóa.');
+      return;
+    }
+    const previous=vocabulary;
+    if(!safeWrite(STORAGE.rescue,{savedAt:new Date().toISOString(),list:previous,history:zhHistory,highScore:zhBest})){
+      alert('Chưa tạo được bản sao lưu dự phòng trên máy. Thao tác xóa đã bị hủy.');return;
+    }
+    // Bản JSON đầy đủ cho phép phục hồi dù Firestore đã bị cập nhật thành công.
+    exportBackup();
+    deletingWords=true;
+    clearTimeout(cloudTimer);cloudTimer=null;
+    try {
+      if(!safeWrite(STORAGE.words,nextWords))throw Error('Không lưu được dữ liệu mới vào trình duyệt.');
+      vocabulary=nextWords;
+      $('zh-filter-topic').value='all';$('zh-filter-level').value='all';
+      resetQuiz();renderAll();
+      setStatus('Đã sao lưu dữ liệu cũ · Đang xác nhận xóa trên Firebase…');
+      // Chờ lệnh ghi cũ kết thúc trước, tránh ghi đè ngược danh sách đã xóa.
+      await inFlightCloudWrite.catch(()=>{});
+      const snap=nextWords.map(w=>({...w}));
+      await cloudDB.collection('vocab_zh').doc('main').set({list:snap,updatedAt:Date.now(),version:1});
+      lastWrittenHash=snapshotHash(snap);
+      syncMeta.lastSyncedHash=lastWrittenHash;setMeta();
+      setStatus('Đã đồng bộ xóa Chinese lên Firebase · Lịch sử Quiz lưu trên máy');
+      alert(label+' Đã đồng bộ Firebase. File sao lưu Chinese đã được yêu cầu tải xuống.');
+    } catch(e) {
+      vocabulary=previous;storeWords();renderAll();
+      setStatus('Xóa Chinese thất bại; đã phục hồi dữ liệu trước thao tác: '+(e.code||e.message),true);
+      alert('Xóa trên Firebase chưa thành công nên danh sách Chinese trên máy đã được khôi phục. Chi tiết: '+(e.code||e.message));
+    } finally {deletingWords=false;}
+  }
+  function deleteAllChineseWords() {
+    if(!checkUnlock()||!ready)return;
+    const count=vocabulary.length;
+    if(!count){alert('Kho từ Chinese đã trống.');return;}
+    if(!confirm(`Bạn sắp XÓA TOÀN BỘ ${count} từ Chinese ở cả máy này và Firebase.\n\nLịch sử Quiz và toàn bộ English vẫn được giữ nguyên.\n\nMột bản sao lưu Chinese sẽ được tải xuống trước khi xóa. Tiếp tục?`))return;
+    const typed=prompt(`Xác nhận lần cuối: nhập XOA để xóa ${count} từ Chinese.`, '');
+    if(typed!=='XOA'){alert('Đã hủy xóa toàn bộ từ Chinese.');return;}
+    void commitChineseRemoval([],`Đã xóa ${count} từ Chinese.`);
+  }
+  function deleteChineseFromFile(file) {
+    if(!checkUnlock()||!ready||!file)return;
+    readFile(file,data=>{
+      if(!Array.isArray(data)||!data.length)throw Error('File xóa phải là mảng JSON từ vựng Chinese không rỗng.');
+      const keys=new Set();
+      for(const raw of data){
+        const hanzi=tidy(raw?.hanzi??raw?.hanzi_traditional),pinyin=tidy(raw?.pinyin),vi=tidy(raw?.vi);
+        if(!hanzi||!pinyin||!vi)throw Error('Có từ thiếu hanzi, pinyin hoặc vi. File English không thể dùng để xóa Chinese.');
+        keys.add([hanzi,pinyin,vi].join('\u0001'));
+      }
+      const next=vocabulary.filter(w=>!keys.has(wordKey(w)));
+      const n=vocabulary.length-next.length;
+      if(!n){alert('Không có từ Chinese nào khớp với file. Không có dữ liệu bị xóa.');return;}
+      if(!confirm(`File có ${data.length} mục; tìm thấy ${n} từ Chinese đang lưu khớp chính xác Hán tự + Pinyin + nghĩa (không xét topic).\n\nXóa ${n} từ khỏi máy này và Firebase?\nMột bản sao lưu sẽ được tải xuống trước khi xóa.`))return;
+      void commitChineseRemoval(next,`Đã xóa ${n} từ Chinese theo file.`);
+    });
   }
   function downloadJSON(filename,data){const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json;charset=utf-8'}));const a=el('a');a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   function readFile(file,callback){if(!file)return;const reader=new FileReader();reader.onload=()=>{try{callback(JSON.parse(String(reader.result)));}catch(e){alert('Không thể đọc file JSON: '+e.message);}};reader.readAsText(file,'UTF-8');}
@@ -2164,6 +2232,9 @@ initApp();
     bind('zh-unlock-btn','click',()=>{if(unlocked){unlocked=false;updateLock();return;}if($('zh-password').value===APP_PASSWORD){unlocked=true;$('zh-password').value='';updateLock();}else alert('Mật khẩu không đúng.');});
     bind('zh-password','keydown',e=>{if(e.key==='Enter')$('zh-unlock-btn').click();});
     bind('zh-add-btn','click',addWord);bind('zh-remove-test','click',removeTest);
+    bind('zh-delete-all','click',deleteAllChineseWords);
+    bind('zh-delete-by-file','click',()=>{if(checkUnlock()&&ready)$('zh-delete-by-file-input').click();});
+    bind('zh-delete-by-file-input','change',e=>{deleteChineseFromFile(e.target.files[0]);e.target.value='';});
     for(const id of ['zh-filter-topic','zh-filter-level'])bind(id,'change',()=>{tableLimit=100;currentIndex=0;filterWords();});
     bind('zh-hide-mastered','click',()=>{hideMastered=!hideMastered;currentIndex=0;filterWords();});
     bind('zh-show-pinyin','change',renderCard);
