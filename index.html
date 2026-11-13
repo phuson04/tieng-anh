@@ -335,6 +335,55 @@ th { background-color: #0d9488; color: white; }
 .score-bar-wrap { background: #eee; border-radius: 6px; overflow: hidden; height: 7px; width: 100%; margin-top: 5px; min-width: 70px; }
 .score-bar-fill { height: 100%; border-radius: 6px; transition: width 0.3s; }
 .pct-badge { padding: 3px 9px; border-radius: 6px; font-size: 12px; font-weight: bold; color: white; display: inline-block; }
+/* ===== V2 CHINESE - tất cả style mới được giới hạn theo workspace ===== */
+.language-switch {display:flex;gap:8px;padding:7px;background:white;border-radius:26px;margin:5px 8px 13px;box-shadow:0 3px 12px #0001;flex-wrap:wrap;justify-content:center}
+.language-btn {border:0;border-radius:22px;padding:10px 24px;cursor:pointer;font-size:16px;font-weight:700;background:#eff4f5;color:#3f5055}
+.language-btn.active {background:#0d9488;color:#fff}
+.language-workspace {width:100%;display:flex;flex-direction:column;align-items:center}
+#chinese-workspace .zh-tabs {margin-bottom:12px}
+#chinese-workspace .zh-intro {text-align:center;margin:0 10px 13px;font-weight:700;color:#0f766e}
+#chinese-workspace .zh-intro span {font-size:12px;color:#6b7280;margin-left:8px;font-weight:normal}
+#chinese-workspace .zh-sync-status {width:min(90%,800px);min-height:20px;font-size:13px;text-align:center;color:#64748b;margin-bottom:11px}
+#chinese-workspace .zh-view {width:100%;display:flex;flex-direction:column;align-items:center}
+#chinese-workspace .zh-edit-locked {opacity:.5;pointer-events:none}
+#chinese-workspace .zh-select {min-width:115px;padding:9px;border:1px solid #ccc;border-radius:6px;background:#fff;color:#333;max-width:100%}
+#chinese-workspace #zh-input-level {flex:1;min-width:115px}
+#chinese-workspace .zh-filter-box {max-width:790px;width:90%;box-sizing:border-box;justify-content:center;gap:12px}
+#chinese-workspace .zh-filter-box label {display:flex;align-items:center;gap:6px;font-size:14px}
+#chinese-workspace .zh-filter-box .zh-inline-check {font-size:13px}
+#chinese-workspace .zh-count {margin-bottom:10px;font-size:14px;font-weight:600;color:#475569}
+#chinese-workspace .zh-hanzi {font-family:'Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif;font-size:46px;line-height:1.25;overflow-wrap:anywhere}
+#chinese-workspace .zh-pronounce {font-size:19px;line-height:1.4;margin-top:9px}
+#chinese-workspace .zh-card-topic {position:absolute;left:14px;top:12px;font-size:12px;border-radius:5px;padding:4px 8px;background:#e0f2f1;color:#0f766e;font-weight:600}
+#chinese-workspace .zh-card-level {font-size:12px;margin:5px}
+#chinese-workspace .zh-card-btns {justify-content:center;flex-wrap:wrap}
+#chinese-workspace .zh-table-box {margin:12px 0 15px}
+#chinese-workspace .zh-table-heading {display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+#chinese-workspace .zh-table-heading h3 {margin:0}
+#chinese-workspace #zh-table-wrapper {margin-top:15px}
+#chinese-workspace .zh-table-scroll {overflow-x:auto}
+#chinese-workspace .zh-table-scroll table {min-width:630px}
+#chinese-workspace .zh-table-more {text-align:center;margin-top:12px}
+#chinese-workspace .zh-source {font-size:12px;color:#64748b;text-align:center;max-width:800px;padding:10px 20px;line-height:1.6}
+#chinese-workspace .zh-source a {color:#0f766e}
+#chinese-workspace #zh-quiz-setup {max-width:530px}
+#chinese-workspace .zh-mode-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px auto 20px}
+#chinese-workspace .zh-mode-grid button {min-width:0}
+#chinese-workspace #zh-quiz-setup input[type="number"] {max-width:220px}
+#chinese-workspace #zh-quiz-setup .start-btn {padding:12px 22px;background:#ea4335;color:white;border:0;border-radius:7px;font-size:16px;font-weight:700;cursor:pointer;width:100%}
+#chinese-workspace .zh-question-main {font-size:38px;font-weight:700;color:#0d9488;overflow-wrap:anywhere;margin:10px 0 12px}
+#chinese-workspace .zh-question-extra {font-size:14px;color:#64748b;margin-bottom:10px}
+#chinese-workspace .zh-retry-msg {font-size:14px;font-weight:600;color:#b45309;margin:10px}
+#chinese-workspace .quiz-result {text-align:center}
+#chinese-workspace .quiz-result #zh-new-quiz {margin:10px}
+#chinese-workspace #zh-quiz-speak {margin:0 0 12px}
+#chinese-workspace .stats-summary-box {margin-top:12px}
+#zh-bulk-modal .zh-modal, #zh-conflict-modal .zh-modal {box-sizing:border-box;line-height:1.5}
+#zh-bulk-modal .zh-modal h3, #zh-conflict-modal .zh-modal h3 {color:#0d9488}
+#zh-bulk-modal .zh-modal label input {margin-left:8px;padding:7px}
+#zh-bulk-modal .zh-modal .modal-btn-confirm, #zh-conflict-modal .modal-btn-confirm {background:#0d9488}
+@media (max-width:600px){#chinese-workspace .zh-hanzi{font-size:40px}#chinese-workspace .zh-mode-grid{grid-template-columns:1fr}#chinese-workspace .zh-card-btns button{padding:10px}#chinese-workspace .nav-btn{padding:9px 13px;font-size:14px}.language-btn{padding:9px 15px}}
+
 </style>
 </head>
 <body>
@@ -345,6 +394,13 @@ th { background-color: #0d9488; color: white; }
   padding: 8px; font-size: 13px; font-weight: bold;
   display: none; transition: 0.3s;">
 </div>
+
+<!-- ===== V2: CHỌN NGÔN NGỮ (KHÔNG CAN THIỆP V1 ENGLISH) ===== -->
+<div class="language-switch" role="group" aria-label="Chọn ngôn ngữ học">
+  <button type="button" class="language-btn active" id="language-en" aria-pressed="true">English</button>
+  <button type="button" class="language-btn" id="language-zh" aria-pressed="false">中文 · TOCFL</button>
+</div>
+<main id="english-workspace" class="language-workspace">
 
 <div class="nav-bar">
   <button class="nav-btn active" id="btn-tab-study" onclick="switchTab('study')">📚 Học Từ</button>
@@ -543,6 +599,121 @@ study  &#712;st&#652;di  Học tập  Unit 2</code>
       <button class="modal-btn-cancel" onclick="closeBulkModal()">Huỷ</button>
       <button class="modal-btn-confirm" onclick="confirmBulkImport()">✅ Thêm vào kho</button>
     </div>
+  </div>
+</div>
+
+</main>
+<!-- ===== V2: CHINESE VOCABULARY P1 ===== -->
+<main id="chinese-workspace" class="language-workspace" style="display:none" lang="zh-Hant">
+  <div class="nav-bar zh-tabs" role="tablist" aria-label="Chức năng học tiếng Trung">
+    <button type="button" id="zh-tab-study" class="nav-btn active" data-zh-tab="study">Học Từ</button>
+    <button type="button" id="zh-tab-quiz" class="nav-btn" data-zh-tab="quiz">Kiểm Tra</button>
+    <button type="button" id="zh-tab-stats" class="nav-btn" data-zh-tab="stats">Tiến Trình</button>
+  </div>
+  <div class="zh-intro">繁體中文 · TOCFL <span>Giai đoạn P1 — Từ vựng & luyện tập</span></div>
+  <div id="zh-sync-status" class="zh-sync-status" role="status" aria-live="polite">Dữ liệu Chinese được lưu riêng với English.</div>
+
+  <section id="zh-view-study" class="zh-view">
+    <div class="lock-bar" id="zh-lock-bar">
+      <span id="zh-lock-status">🔒 Đang ở chế độ xem — nhập mật khẩu để chỉnh sửa:</span>
+      <input id="zh-password" type="password" placeholder="Mật khẩu..." autocomplete="off">
+      <button type="button" class="lock-btn unlock" id="zh-unlock-btn">Mở khóa</button>
+    </div>
+    <div id="zh-editor" class="add-word-box zh-edit-locked">
+      <input id="zh-input-topic" type="text" placeholder="Chủ đề (VD: test)">
+      <input id="zh-input-hanzi" type="text" placeholder="Chữ phồn thể (VD: 學校)">
+      <input id="zh-input-pinyin" type="text" placeholder="Pinyin (VD: xuéxiào)">
+      <input id="zh-input-vi" type="text" placeholder="Nghĩa tiếng Việt...">
+      <select id="zh-input-level" aria-label="Cấp độ TOCFL" class="zh-select"><option value="">Chưa phân cấp</option><option value="Novice">Novice</option><option value="Level 1">Level 1 (A1)</option><option value="Level 2">Level 2 (A2)</option><option value="Level 3">Level 3 (B1)</option><option value="Level 4">Level 4 (B2)</option><option value="Level 5">Level 5 (C1)</option><option value="Level 6">Level 6 (C2)</option></select>
+      <button type="button" id="zh-add-btn" class="add-btn">Thêm từ</button>
+    </div>
+    <div id="zh-data-actions" class="data-actions-box zh-edit-locked">
+      <button type="button" id="zh-export-vocab" class="action-btn btn-export">Xuất từ vựng</button>
+      <button type="button" id="zh-import-vocab" class="action-btn btn-import">Nhập JSON</button>
+      <input type="file" id="zh-import-file" accept=".json,application/json" hidden>
+      <button type="button" id="zh-bulk-open" class="action-btn btn-bulk">Thêm hàng loạt</button>
+      <button type="button" id="zh-remove-test" class="action-btn" style="background:#d95d39">Xóa toàn bộ topic test</button>
+      <button type="button" id="zh-export-backup" class="action-btn" style="background:#64748b">Sao lưu Chinese đầy đủ</button>
+      <button type="button" id="zh-import-backup" class="action-btn" style="background:#64748b">Khôi phục bản sao</button>
+      <input type="file" id="zh-backup-file" accept=".json,application/json" hidden>
+    </div>
+    <div class="filter-box zh-filter-box" lang="vi">
+      <label>Chủ đề: <select id="zh-filter-topic" class="zh-select"><option value="all">Tất cả</option></select></label>
+      <label>TOCFL: <select id="zh-filter-level" class="zh-select"><option value="all">Tất cả</option><option value="Novice">Novice</option><option value="Level 1">Level 1</option><option value="Level 2">Level 2</option><option value="Level 3">Level 3</option><option value="Level 4">Level 4</option><option value="Level 5">Level 5</option><option value="Level 6">Level 6</option><option value="none">Chưa phân cấp</option></select></label>
+      <button type="button" id="zh-hide-mastered" class="mastered-filter-btn">Ẩn từ đã thuộc</button>
+      <label class="zh-inline-check"><input id="zh-show-pinyin" type="checkbox"> Hiện Pinyin trước khi lật</label>
+    </div>
+    <div id="zh-word-count" class="zh-count">Đang tải từ vựng…</div>
+    <div class="flashcard-order-box" lang="vi">
+      <span style="font-size:13px;color:#555;font-weight:bold">Thứ tự:</span>
+      <button type="button" id="zh-order-seq" class="order-btn active">Theo thứ tự</button>
+      <button type="button" id="zh-order-rand" class="order-btn">Ngẫu nhiên</button>
+    </div>
+    <div class="flashcard-container"><div id="zh-flashcard" class="flashcard" tabindex="0" role="button" aria-label="Lật Flashcard"><div id="zh-front" class="front"></div><div id="zh-back" class="back"></div></div></div>
+    <div class="flashcard-btns zh-card-btns" lang="vi">
+      <button type="button" id="zh-toggle-mastered" class="mark-mastered-btn">Đã thuộc</button>
+      <button type="button" id="zh-prev" class="next-btn" style="background:#888">Từ trước</button>
+      <button type="button" id="zh-next" class="next-btn">Từ tiếp theo</button>
+    </div>
+    <div class="table-container zh-table-box" lang="vi">
+      <div class="zh-table-heading"><h3>Danh sách từ vựng Chinese</h3><button type="button" id="zh-table-toggle" class="action-btn" style="background:#0d9488">Xem danh sách</button></div>
+      <div id="zh-table-wrapper" style="display:none"><div class="zh-table-scroll"><table><thead><tr><th>STT</th><th>Chủ đề</th><th>Hán tự</th><th>Pinyin</th><th>Nghĩa</th><th>TOCFL</th><th>Thao tác</th></tr></thead><tbody id="zh-table-body"></tbody></table></div><div id="zh-table-more" class="zh-table-more"></div></div>
+    </div>
+    <div class="zh-source">30 từ khởi tạo từ danh sách TOCFL Novice (bản mẫu để thử chức năng). <a href="https://tocfl.edu.tw/tocfl/index.php/exam/download" target="_blank" rel="noopener noreferrer">Nguồn SC-TOP</a> · <a href="https://ciaospeak.app/tocfl/vocabulary/novice-1/" target="_blank" rel="noopener noreferrer">Đối chiếu Pinyin</a>.</div>
+  </section>
+
+  <section id="zh-view-quiz" class="zh-view" style="display:none" lang="vi">
+    <div id="zh-quiz-setup" class="quiz-setup">
+      <h3>Cài đặt bài kiểm tra Chinese</h3>
+      <label>Chủ đề<br><select id="zh-quiz-topic" class="zh-select"><option value="all">Tất cả</option></select></label>
+      <p>Kiểu kiểm tra:</p>
+      <div class="zh-mode-grid" id="zh-quiz-mode-buttons">
+        <button type="button" class="quiz-mode-btn selected" data-mode="hanzi-to-vi">Hán tự → Nghĩa Việt</button>
+        <button type="button" class="quiz-mode-btn" data-mode="vi-to-hanzi">Nghĩa Việt → Hán tự</button>
+        <button type="button" class="quiz-mode-btn" data-mode="hanzi-to-pinyin">Hán tự → Pinyin</button>
+        <button type="button" class="quiz-mode-btn" data-mode="pinyin-to-hanzi">Pinyin → Hán tự</button>
+      </div>
+      <label>Bao gồm từ đã thuộc?<br><select id="zh-quiz-include-mastered"><option value="no">Không (chỉ từ chưa thuộc)</option><option value="yes">Có (tất cả)</option></select></label><br>
+      <label>Số câu hỏi<br><input type="number" min="1" value="5" id="zh-quiz-amount"></label><br>
+      <button type="button" id="zh-start-quiz" class="start-btn">Bắt đầu làm bài</button>
+    </div>
+    <div id="zh-quiz-play" class="quiz-card" style="display:none">
+      <div id="zh-retry-banner" class="quiz-retry-banner" style="display:none"></div>
+      <div class="quiz-top-row"><button id="zh-quiz-exit" type="button" class="exit-btn">Thoát</button><button id="zh-quiz-flag" type="button" class="flag-btn">Đánh dấu làm lại</button></div>
+      <div id="zh-quiz-counter" class="quiz-progress"></div>
+      <div id="zh-quiz-prompt"></div>
+      <button type="button" id="zh-quiz-speak" class="speak-btn" aria-label="Nghe phát âm">🔊</button>
+      <div id="zh-quiz-options" class="quiz-options"></div>
+    </div>
+    <div id="zh-quiz-result" class="quiz-card quiz-result" style="display:none">
+      <h2 id="zh-result-title">Hoàn thành!</h2><p>Điểm bài chính:</p><h1 id="zh-result-score">0 / 0</h1>
+      <div id="zh-quiz-best"></div><div id="zh-quiz-retry-msg" class="zh-retry-msg"></div>
+      <button type="button" id="zh-mandatory-retry" class="btn-retry-flagged" style="display:none">Làm lại câu sai (bắt buộc)</button>
+      <button type="button" id="zh-flagged-retry" class="btn-retry-flagged" style="display:none">Làm lại câu đã đánh dấu</button>
+      <button type="button" id="zh-new-quiz" class="next-btn">Làm bài khác</button>
+    </div>
+  </section>
+
+  <section id="zh-view-stats" class="zh-view" style="display:none" lang="vi">
+    <div id="zh-stats-summary" class="stats-summary-box"></div>
+    <div class="table-container zh-table-box"><h3>Lịch sử kiểm tra Chinese</h3><div class="zh-table-scroll"><table><thead><tr><th>Ngày giờ</th><th>Chủ đề</th><th>Kiểu KT</th><th>Điểm</th><th>%</th></tr></thead><tbody id="zh-stats-body"></tbody></table></div><div class="zh-table-more"><button type="button" id="zh-history-clear" class="delete-btn">Xóa lịch sử</button></div></div>
+  </section>
+</main>
+
+<div id="zh-bulk-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Thêm từ tiếng Trung hàng loạt">
+  <div class="modal-box zh-modal">
+    <h3>Thêm từ Chinese hàng loạt</h3>
+    <p>Mỗi dòng: <strong>Hán tự [Tab] Pinyin [Tab] Nghĩa Việt [Tab] Chủ đề (tùy chọn)</strong>. Có thể dán trực tiếp từ Excel.</p>
+    <label>Chủ đề mặc định <input id="zh-bulk-topic" type="text" value="test"></label>
+    <textarea id="zh-bulk-text" placeholder="學校&#9;xuéxiào&#9;Trường học&#9;test"></textarea>
+    <div id="zh-bulk-preview" class="bulk-preview"></div>
+    <div class="modal-actions"><button type="button" id="zh-bulk-cancel" class="modal-btn-cancel">Hủy</button><button type="button" id="zh-bulk-confirm" class="modal-btn-confirm">Thêm vào kho</button></div>
+  </div>
+</div>
+<div id="zh-conflict-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Chọn dữ liệu Chinese">
+  <div class="modal-box zh-modal"><h3>Dữ liệu Chinese trên máy và cloud khác nhau</h3>
+    <p>Hai bên đều có thay đổi chưa đồng bộ. Chọn dữ liệu để tiếp tục; ứng dụng sẽ lưu bản dự phòng cục bộ trước khi thay thế.</p>
+    <div class="modal-actions"><button id="zh-conflict-cloud" class="modal-btn-confirm" type="button">Dùng cloud</button><button id="zh-conflict-local" class="modal-btn-cancel" type="button">Dùng dữ liệu máy này</button></div>
   </div>
 </div>
 
@@ -1621,6 +1792,411 @@ function renderStatsView() {
 
 // ===================== KHỞI ĐỘNG =====================
 initApp();
+</script>
+<script>
+/* ===== V2 P1: CHINESE VOCABULARY (tách hoàn toàn dữ liệu English) ===== */
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const STORAGE = {
+    words: 'myAppVocabZHTW', meta: 'myAppVocabZHTWMeta',
+    history: 'myAppZhTWQuizHistory', best: 'myAppZhTWQuizHighScore_pct',
+    rescue: 'myAppZhTWBackupBeforeConflict'
+  };
+  const seededTuples = [
+    ['我','wǒ','Tôi'], ['你','nǐ','Bạn'], ['他','tā','Anh ấy'],
+    ['我們','wǒmen','Chúng tôi; chúng ta'], ['您','nín','Bạn; ngài (lịch sự)'],
+    ['誰','shéi','Ai'], ['人','rén','Người'], ['臺灣','táiwān','Đài Loan'],
+    ['家','jiā','Nhà; gia đình'], ['電話','diànhuà','Điện thoại'],
+    ['今天','jīntiān','Hôm nay'], ['明天','míngtiān','Ngày mai'],
+    ['昨天','zuótiān','Hôm qua'], ['現在','xiànzài','Bây giờ'],
+    ['晚上','wǎnshàng','Buổi tối'], ['爸爸','bàba','Bố'],
+    ['媽媽','māma','Mẹ'], ['老師','lǎoshī','Giáo viên'],
+    ['學生','xuéshēng','Học sinh; sinh viên'], ['學校','xuéxiào','Trường học'],
+    ['大學','dàxué','Đại học'], ['中文','zhōngwén','Tiếng Trung'],
+    ['同學','tóngxué','Bạn học'], ['學','xué','Học'],
+    ['說','shuō','Nói'], ['聽','tīng','Nghe'], ['寫','xiě','Viết'],
+    ['水','shuǐ','Nước'], ['朋友','péngyǒu','Bạn bè; bạn'],
+    ['謝謝','xièxie','Cảm ơn']
+  ];
+  const createSeed = () => seededTuples.map((w,i) => ({
+    id: `ZH-TEST-${String(i+1).padStart(4,'0')}`,
+    topic: 'test', hanzi:w[0], pinyin:w[1], vi:w[2],
+    tocfl_level:'Novice', mastered:false,
+    source:'SC-TOP 華語八千詞 (đối chiếu CiaoSpeak Novice 1)'
+  }));
+  const allowedLevels = new Set(['Novice','Level 1','Level 2','Level 3','Level 4','Level 5','Level 6']);
+  const safeRead = (key, fallback) => { try { const raw=localStorage.getItem(key); return raw===null?fallback:JSON.parse(raw); } catch(e) {return fallback;} };
+  const safeWrite = (key, value) => { try {localStorage.setItem(key,JSON.stringify(value));return true;}catch(e){setStatus('Không lưu được trên trình duyệt: '+e.message, true);return false;} };
+  const uniqueId = () => 'ZH-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,9);
+  const tidy = v => typeof v === 'string' ? v.trim() : '';
+  function normalizeWord(w) {
+    if (!w || typeof w !== 'object') return null;
+    const hanzi=tidy(w.hanzi ?? w.hanzi_traditional), pinyin=tidy(w.pinyin), vi=tidy(w.vi);
+    if (!hanzi || !pinyin || !vi) return null;
+    return {id:tidy(w.id)||uniqueId(),topic:tidy(w.topic)||'Chung',hanzi,pinyin,vi,
+      tocfl_level:allowedLevels.has(w.tocfl_level)?w.tocfl_level:null,mastered:w.mastered===true,
+      ...(tidy(w.source)?{source:tidy(w.source)}:{})};
+  }
+  function normalizeList(list) {
+    if (!Array.isArray(list)) return null;
+    const ids=new Set(), seen=new Set(), result=[];
+    for(const raw of list) {
+      const w=normalizeWord(raw); if(!w) return null;
+      const k=[w.hanzi,w.pinyin,w.vi].join('\u0001');
+      if(seen.has(k)) continue;
+      if(ids.has(w.id)) w.id=uniqueId();
+      ids.add(w.id);seen.add(k);result.push(w);
+    }
+    return result;
+  }
+  const wordKey = w => [w.hanzi,w.pinyin,w.vi].join('\u0001');
+  const snapshotHash = list => JSON.stringify(list); // snapshot so sánh, không dùng làm hash bảo mật
+  let vocabulary=[], filtered=[], ordered=[], currentIndex=0, isFlipped=false;
+  let unlocked=false, hideMastered=false, randomOrder=false, tableVisible=false, tableLimit=100;
+  let quizMode='hanzi-to-vi', questionList=[], questionIndex=0, quizScore=0, quizPhase='main';
+  let retryList=[], missed=[], flagged=[], quizReview=false, originalTotal=0, quizTopicsLabel='Tất cả', answered=false;
+  let ready=false, cloudTimer=null, cloudDB=null, cloudAvailable=false, lastWrittenHash='';
+  let syncMeta=safeRead(STORAGE.meta,{})||{};
+  let zhHistory=safeRead(STORAGE.history,[]); if(!Array.isArray(zhHistory))zhHistory=[];
+  let zhBest=Number(safeRead(STORAGE.best,0))||0;
+  const shuffle = a => {const b=a.slice();for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;};
+  function setStatus(message,isError=false){const el=$('zh-sync-status');el.textContent=message;el.style.color=isError?'#b45309':'#64748b';}
+  function storeWords() {return safeWrite(STORAGE.words,vocabulary);}
+  function setMeta(){safeWrite(STORAGE.meta,syncMeta);}
+  function backupConflict(){safeWrite(STORAGE.rescue,{savedAt:new Date().toISOString(),list:vocabulary,history:zhHistory,highScore:zhBest});}
+  function localChange() {
+    if(!storeWords())return;
+    renderAll();
+    scheduleCloudSave();
+  }
+  function scheduleCloudSave() {
+    if(!ready)return;
+    if(!cloudAvailable){setStatus('Đã lưu trên máy. Cloud chưa khả dụng; dữ liệu Chinese chưa được đồng bộ.',true);return;}
+    clearTimeout(cloudTimer);
+    setStatus('Đã lưu trên máy · Chờ đồng bộ Chinese…');
+    cloudTimer=setTimeout(() => {cloudTimer=null;writeCloud();},850);
+  }
+  async function writeCloud() {
+    if(!cloudAvailable)return;
+    const snap=vocabulary.map(w=>({...w})), snapHash=snapshotHash(snap);
+    if(snapHash===lastWrittenHash){setStatus('Chinese đã đồng bộ · Lịch sử Quiz lưu trên máy');return;}
+    try {
+      await cloudDB.collection('vocab_zh').doc('main').set({list:snap,updatedAt:Date.now(),version:1});
+      lastWrittenHash=snapHash;syncMeta.lastSyncedHash=snapHash;setMeta();
+      setStatus('Đã đồng bộ từ Chinese · Lịch sử Quiz lưu trên máy');
+      if(snapshotHash(vocabulary)!==snapHash)scheduleCloudSave();
+    }catch(e){setStatus('Đã lưu trên máy, chưa đồng bộ cloud: '+(e.code||e.message),true);}
+  }
+  async function chooseConflict() {
+    $('zh-conflict-modal').classList.add('active');
+    return await new Promise(resolve=>{
+      $('zh-conflict-cloud').onclick=()=>{ $('zh-conflict-modal').classList.remove('active');resolve('cloud'); };
+      $('zh-conflict-local').onclick=()=>{ $('zh-conflict-modal').classList.remove('active');resolve('local'); };
+    });
+  }
+  async function initChinese() {
+    const localRaw=safeRead(STORAGE.words,null), local=normalizeList(localRaw);
+    if (localRaw!==null && local===null) setStatus('Dữ liệu Chinese cục bộ không hợp lệ — chưa ghi đè, cần kiểm tra JSON.',true);
+    try {
+      if(typeof firebase!=='undefined' && firebase.apps && firebase.apps.length){cloudDB=firebase.firestore();cloudAvailable=true;}
+    }catch(e){cloudAvailable=false;}
+    let remote=null, gotCloud=false;
+    if(cloudAvailable){try{
+      const doc=await cloudDB.collection('vocab_zh').doc('main').get();
+      gotCloud=true;
+      if(doc.exists){remote=normalizeList(doc.data()?.list);if(remote===null)throw new Error('Dữ liệu cloud không hợp lệ');}
+    }catch(e){cloudAvailable=false;setStatus('Không thể đọc Chinese cloud, đang dùng dữ liệu trên máy: '+(e.code||e.message),true);}}
+    if(localRaw!==null && local===null){ // Không tự ghi đè JSON hỏng trong máy.
+      vocabulary=[];ready=false;renderAll();return;
+    }
+    if(remote!==null && local!==null){
+      const lh=snapshotHash(local),rh=snapshotHash(remote);
+      if(lh===rh){vocabulary=local;lastWrittenHash=rh;syncMeta.lastSyncedHash=rh;setMeta();}
+      else if(syncMeta.lastSyncedHash===lh){vocabulary=remote;lastWrittenHash=rh;storeWords();syncMeta.lastSyncedHash=rh;setMeta();}
+      else if(syncMeta.lastSyncedHash===rh){vocabulary=local;lastWrittenHash=rh;}
+      else {vocabulary=local;backupConflict();const chosen=await chooseConflict();
+        if(chosen==='cloud'){vocabulary=remote;lastWrittenHash=rh;storeWords();syncMeta.lastSyncedHash=rh;setMeta();}
+        else{lastWrittenHash=rh;}
+      }
+    } else if(remote!==null){vocabulary=remote;lastWrittenHash=snapshotHash(remote);storeWords();syncMeta.lastSyncedHash=lastWrittenHash;setMeta();}
+    else if(local!==null){vocabulary=local;}
+    else {vocabulary=createSeed();storeWords();}
+    ready=true;renderAll();
+    if(cloudAvailable){if(snapshotHash(vocabulary)!==lastWrittenHash)scheduleCloudSave();else setStatus('Chinese sẵn sàng · Lịch sử Quiz lưu trên máy');}
+    else if(!gotCloud)setStatus('Chinese sẵn sàng · Đã lưu trên máy (cloud không khả dụng)',true);
+  }
+  function bind(id,event,fn) {const el=$(id);if(el)el.addEventListener(event,fn);}
+  function switchLanguage(lang) {
+    const zh=lang==='zh';
+    $('english-workspace').style.display=zh?'none':'flex';
+    $('chinese-workspace').style.display=zh?'flex':'none';
+    $('language-en').classList.toggle('active',!zh);$('language-zh').classList.toggle('active',zh);
+    $('language-en').setAttribute('aria-pressed',String(!zh));$('language-zh').setAttribute('aria-pressed',String(zh));
+    if(zh)renderAll();
+  }
+  function switchChineseTab(tab){
+    for(const t of ['study','quiz','stats']){
+      $('zh-view-'+t).style.display=t===tab?'flex':'none';
+      $('zh-tab-'+t).classList.toggle('active',t===tab);
+    }
+    if(tab==='stats')renderStats();
+    if(tab==='quiz' && questionList.length===0)resetQuiz();
+  }
+  function updateLock(){
+    $('zh-lock-status').textContent=unlocked?'Đã mở khóa — có thể chỉnh sửa từ vựng':'Đang ở chế độ xem — nhập mật khẩu để chỉnh sửa:';
+    $('zh-password').style.display=unlocked?'none':'';
+    $('zh-unlock-btn').textContent=unlocked?'Khóa lại':'Mở khóa';
+    $('zh-lock-bar').classList.toggle('unlocked',unlocked);
+    $('zh-editor').classList.toggle('zh-edit-locked',!unlocked);
+    $('zh-data-actions').classList.toggle('zh-edit-locked',!unlocked);
+    renderTable();
+  }
+  function checkUnlock(){if(unlocked)return true;alert('Vui lòng mở khóa để chỉnh sửa hoặc đánh dấu đã thuộc.');return false;}
+  function topics(){return [...new Set(vocabulary.map(w=>w.topic))].sort((a,b)=>a.localeCompare(b,'vi'));}
+  function refreshSelect(id,selected){
+    const el=$(id), old=selected??el.value;el.replaceChildren();
+    el.add(new Option('Tất cả','all'));
+    for(const topic of topics())el.add(new Option(topic,topic));
+    el.value=[...el.options].some(o=>o.value===old)?old:'all';
+  }
+  function refreshTopics(){refreshSelect('zh-filter-topic');refreshSelect('zh-quiz-topic');}
+  function filterWords(){
+    const topic=$('zh-filter-topic').value,level=$('zh-filter-level').value;
+    filtered=vocabulary.filter(w=>(topic==='all'||w.topic===topic)&&(level==='all'||(level==='none'?!w.tocfl_level:w.tocfl_level===level))&&(!hideMastered||!w.mastered));
+    ordered=randomOrder?shuffle(filtered):filtered.slice();
+    currentIndex=Math.min(currentIndex,Math.max(0,ordered.length-1));isFlipped=false;
+    $('zh-hide-mastered').classList.toggle('active',hideMastered);
+    $('zh-hide-mastered').textContent=hideMastered?'Hiện từ đã thuộc':'Ẩn từ đã thuộc';
+    $('zh-order-seq').classList.toggle('active',!randomOrder);$('zh-order-rand').classList.toggle('active',randomOrder);
+    $('zh-word-count').textContent=`Tổng số từ: ${vocabulary.length} · Đang hiển thị: ${filtered.length} · Đã thuộc: ${vocabulary.filter(w=>w.mastered).length}`;
+    renderCard();renderTable();
+  }
+  function el(tag, cls, txt){const n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n;}
+  function currentWord(){return ordered[currentIndex]||null;}
+  function clearFlip(){isFlipped=false;$('zh-flashcard').classList.remove('flipped');}
+  function renderCard(){
+    clearFlip();const front=$('zh-front'),back=$('zh-back');front.replaceChildren();back.replaceChildren();
+    const w=currentWord();
+    if(!w){front.append(el('span','zh-hanzi','Chưa có từ'));back.append(el('span','', 'Hãy thêm từ vựng Chinese.'));$('zh-toggle-mastered').textContent='Đã thuộc';return;}
+    front.append(el('span','zh-card-topic',w.topic));
+    if(w.mastered){const bad=el('span','mastered-badge','Đã thuộc');front.append(bad);}
+    front.append(el('div','zh-hanzi',w.hanzi));
+    if($('zh-show-pinyin').checked)front.append(el('div','zh-pronounce',w.pinyin));
+    const speak=el('button','speak-btn','🔊');speak.type='button';speak.title='Nghe phát âm';speak.addEventListener('click',e=>{e.stopPropagation();speakChinese(w.hanzi);});front.append(speak);
+    front.append(el('div','hint','Nhấn để lật thẻ'));
+    back.append(el('div','zh-pronounce',w.pinyin));back.append(el('div','',w.vi));back.append(el('div','hint',w.tocfl_level||'Chưa phân cấp'));
+    $('zh-toggle-mastered').textContent=w.mastered?'Bỏ đánh dấu đã thuộc':'Đã thuộc';
+    $('zh-toggle-mastered').classList.toggle('is-mastered',w.mastered);
+  }
+  function flipCard(){if(!currentWord())return;isFlipped=!isFlipped;$('zh-flashcard').classList.toggle('flipped',isFlipped);}
+  function moveCard(delta){if(!ordered.length)return;currentIndex=(currentIndex+delta+ordered.length)%ordered.length;renderCard();}
+  function speakChinese(word){
+    if(!window.speechSynthesis){setStatus('Trình duyệt không hỗ trợ phát âm.',true);return;}
+    const voices=window.speechSynthesis.getVoices(), voice=voices.find(v=>v.lang.toLowerCase().replace('_','-')==='zh-tw');
+    if(!voice){setStatus('Thiết bị chưa có giọng đọc zh-TW. Hãy bật giọng tiếng Trung Đài Loan trong hệ điều hành.',true);return;}
+    window.speechSynthesis.cancel();const utt=new SpeechSynthesisUtterance(word);utt.lang='zh-TW';utt.voice=voice;utt.rate=.85;window.speechSynthesis.speak(utt);
+  }
+  function renderTable(){
+    if(!tableVisible)return;
+    const tb=$('zh-table-body');tb.replaceChildren();const records=filtered.slice(0,tableLimit);
+    records.forEach((w,i)=>{
+      const tr=el('tr',w.mastered?'mastered-row':'');
+      for(const value of [String(i+1),w.topic,w.hanzi,w.pinyin,w.vi,w.tocfl_level||'—'])tr.append(el('td','',value));
+      const cell=el('td','');
+      if(unlocked){
+        for(const [name,action,cls] of [[w.mastered?'Bỏ thuộc':'Thuộc',()=>toggleMastered(w.id),'master-row-btn'],['Sửa',()=>editWord(w.id),'edit-btn'],['Xóa',()=>removeWord(w.id),'delete-btn']]){
+          const b=el('button',cls,name);b.type='button';b.addEventListener('click',action);cell.append(b,document.createTextNode(' '));
+        }
+      } else cell.textContent='Đang khóa';
+      tr.append(cell);tb.append(tr);
+    });
+    const more=$('zh-table-more');more.replaceChildren();
+    if(filtered.length>records.length){const btn=el('button','next-btn',`Xem thêm ${Math.min(100,filtered.length-records.length)} từ`);btn.type='button';btn.addEventListener('click',()=>{tableLimit+=100;renderTable();});more.append(btn);}
+  }
+  function renderAll(){refreshTopics();filterWords();renderStats();}
+  function toggleMastered(id){if(!checkUnlock())return;const w=vocabulary.find(w=>w.id===id);if(!w)return;w.mastered=!w.mastered;localChange();}
+  function addWord(){if(!checkUnlock()||!ready)return;
+    const w=normalizeWord({topic:$('zh-input-topic').value,hanzi:$('zh-input-hanzi').value,pinyin:$('zh-input-pinyin').value,vi:$('zh-input-vi').value,tocfl_level:$('zh-input-level').value});
+    if(!w){alert('Vui lòng nhập đủ Hán tự, Pinyin và nghĩa tiếng Việt.');return;}
+    if(vocabulary.some(x=>wordKey(x)===wordKey(w))){alert('Từ này đã tồn tại.');return;}
+    vocabulary.push(w);$('zh-input-topic').value=w.topic;
+    for(const id of ['zh-input-hanzi','zh-input-pinyin','zh-input-vi'])$(id).value='';
+    $('zh-filter-topic').value='all';localChange();
+  }
+  function editWord(id){if(!checkUnlock())return;const w=vocabulary.find(w=>w.id===id);if(!w)return;
+    const fields=[['hanzi','Hán tự'],['pinyin','Pinyin'],['vi','Nghĩa tiếng Việt'],['topic','Chủ đề']];const n={...w};
+    for(const [field,label] of fields){const s=prompt(`Sửa ${label}:`,n[field]);if(s===null)return;n[field]=s.trim();if(!n[field]){alert('Không được để trống '+label);return;}}
+    const lev=prompt('Cấp TOCFL (Novice, Level 1–6; bỏ trống nếu chưa xác minh):',n.tocfl_level||'');
+    if(lev===null)return;if(lev.trim() && !allowedLevels.has(lev.trim())){alert('Cấp độ không hợp lệ.');return;}
+    n.tocfl_level=lev.trim()||null;
+    if(vocabulary.some(x=>x.id!==id&&wordKey(x)===wordKey(n))){alert('Dữ liệu này trùng một từ đã có.');return;}
+    Object.assign(w,n);localChange();
+  }
+  function removeWord(id){if(!checkUnlock())return;const w=vocabulary.find(w=>w.id===id);if(!w||!confirm(`Xóa ${w.hanzi} (${w.pinyin})?`))return;vocabulary=vocabulary.filter(x=>x.id!==id);localChange();}
+  function removeTest(){if(!checkUnlock())return;const n=vocabulary.filter(w=>w.topic==='test').length;if(!n){alert('Không có từ thuộc topic test.');return;}
+    if(!confirm(`Xóa toàn bộ ${n} từ có topic "test"? Có thể sao lưu trước khi xóa.`))return;
+    vocabulary=vocabulary.filter(w=>w.topic!=='test');localChange();
+  }
+  function downloadJSON(filename,data){const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json;charset=utf-8'}));const a=el('a');a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+  function readFile(file,callback){if(!file)return;const reader=new FileReader();reader.onload=()=>{try{callback(JSON.parse(String(reader.result)));}catch(e){alert('Không thể đọc file JSON: '+e.message);}};reader.readAsText(file,'UTF-8');}
+  function importVocab(file){if(!checkUnlock()||!ready)return;readFile(file,data=>{
+    if(!Array.isArray(data))throw Error('File nhập từ vựng phải là một mảng JSON. Dùng tính năng Khôi phục cho file sao lưu đầy đủ.');
+    const valid=normalizeList(data);if(!valid||valid.length!==data.length)throw Error('Có từ thiếu trường bắt buộc hoặc dữ liệu trùng. Vui lòng kiểm tra file trước khi nhập.');
+    const seen=new Set(vocabulary.map(wordKey)),ids=new Set(vocabulary.map(w=>w.id));let added=0;
+    for(const w of valid){if(seen.has(wordKey(w)))continue;if(ids.has(w.id))w.id=uniqueId();vocabulary.push(w);seen.add(wordKey(w));ids.add(w.id);added++;}
+    localChange();alert(`Đã thêm ${added} từ mới. Bỏ qua ${valid.length-added} từ trùng.`);
+  });}
+  function parseBulk(){const defaultTopic=tidy($('zh-bulk-topic').value)||'test';const lines=$('zh-bulk-text').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+    const rows=[];let invalid=0;
+    for(const line of lines){const c=line.split('\t').map(x=>x.trim());if(c.length<3||!c[0]||!c[1]||!c[2]){invalid++;continue;}
+      rows.push(normalizeWord({hanzi:c[0],pinyin:c[1],vi:c[2],topic:c[3]||defaultTopic}));}
+    return {rows,invalid};
+  }
+  function previewBulk(){const {rows,invalid}=parseBulk();$('zh-bulk-preview').textContent=`Đã đọc ${rows.length} dòng hợp lệ; ${invalid} dòng thiếu trường. Ví dụ: ${rows.slice(0,3).map(w=>w.hanzi+' ('+w.pinyin+')').join(', ')}`;}
+  function commitBulk(){if(!checkUnlock()||!ready)return;const {rows,invalid}=parseBulk();if(invalid){alert(`Có ${invalid} dòng không hợp lệ. Vui lòng sửa trước khi nhập.`);return;}if(!rows.length)return;
+    const seen=new Set(vocabulary.map(wordKey));let added=0;
+    for(const w of rows){if(seen.has(wordKey(w)))continue;vocabulary.push(w);seen.add(wordKey(w));added++;}
+    localChange();$('zh-bulk-modal').classList.remove('active');alert(`Đã thêm ${added} từ, bỏ qua ${rows.length-added} từ trùng.`);
+  }
+  function exportBackup(){downloadJSON('Chinese_Full_Backup.json',{type:'chinese-full-backup',version:1,exportedAt:new Date().toISOString(),vocabulary,quizHistory:zhHistory,highScore:zhBest});}
+  function restoreBackup(file){if(!checkUnlock()||!ready)return;readFile(file,data=>{
+    if(data?.type!=='chinese-full-backup'||data.version!==1)throw Error('Không phải file sao lưu Chinese V2 hợp lệ.');
+    const list=normalizeList(data.vocabulary);
+    if(!list||!Array.isArray(data.quizHistory)||!Number.isFinite(Number(data.highScore)))throw Error('Dữ liệu sao lưu thiếu hoặc không hợp lệ.');
+    if(!confirm(`Khôi phục ${list.length} từ và ${data.quizHistory.length} lượt kiểm tra? Dữ liệu Chinese hiện tại sẽ được thay thế; English không bị ảnh hưởng.`))return;
+    backupConflict();vocabulary=list;zhHistory=data.quizHistory;zhBest=Number(data.highScore);
+    safeWrite(STORAGE.history,zhHistory);safeWrite(STORAGE.best,zhBest);localChange();alert('Đã khôi phục Chinese trên máy. Đang thử đồng bộ từ vựng lên cloud.');
+  });}
+  const modeDetails={
+    'hanzi-to-vi': ['hanzi','vi','Chữ Hán này có nghĩa gì?','Hán tự → Việt'],
+    'vi-to-hanzi': ['vi','hanzi','Chọn từ tiếng Trung phù hợp:','Việt → Hán tự'],
+    'hanzi-to-pinyin': ['hanzi','pinyin','Chọn Pinyin đúng (chú ý dấu thanh):','Hán tự → Pinyin'],
+    'pinyin-to-hanzi': ['pinyin','hanzi','Chọn Hán tự có phát âm này:','Pinyin → Hán tự']
+  };
+  function buildQuizPool(){
+    const topic=$('zh-quiz-topic').value,include=$('zh-quiz-include-mastered').value==='yes';
+    const entries=vocabulary.filter(w=>(topic==='all'||w.topic===topic)&&(include||!w.mastered));
+    const [promptField,answerField]=modeDetails[quizMode];
+    // Loại trường hợp một prompt có nhiều đáp án khác nhau.
+    const promptMap=new Map();
+    for(const w of vocabulary){const k=w[promptField];if(!promptMap.has(k))promptMap.set(k,new Set());promptMap.get(k).add(w[answerField]);}
+    const safeEntries=entries.filter(w=>promptMap.get(w[promptField]).size===1);
+    const distinctAnswers=new Set(vocabulary.map(w=>w[answerField]));
+    if(distinctAnswers.size<4)return null;
+    return safeEntries;
+  }
+  function resetQuiz(){questionList=[];questionIndex=0;retryList=[];missed=[];flagged=[];quizPhase='main';quizReview=false;
+    $('zh-quiz-setup').style.display='block';$('zh-quiz-play').style.display='none';$('zh-quiz-result').style.display='none';}
+  function startQuiz(isReview=false,items=null){
+    if(!ready){alert('Chinese chưa tải xong.');return;}
+    let list=items;
+    if(!list){const pool=buildQuizPool();if(!pool){alert('Cần tối thiểu 4 đáp án khác nhau trong kho từ để tạo Quiz.');return;}
+      if(!pool.length){alert('Không có câu hỏi phù hợp với bộ lọc hoặc các nghĩa/Pinyin đang bị trùng.');return;}
+      const amount=Math.max(1,Math.min(500,parseInt($('zh-quiz-amount').value,10)||5));list=shuffle(pool).slice(0,Math.min(amount,pool.length));
+    }
+    questionList=list.slice();questionIndex=0;quizScore=0;quizPhase='main';quizReview=isReview;originalTotal=list.length;missed=[];retryList=[];flagged=[];
+    quizTopicsLabel=$('zh-quiz-topic').value==='all'?'Tất cả':$('zh-quiz-topic').value;
+    $('zh-quiz-setup').style.display='none';$('zh-quiz-result').style.display='none';$('zh-quiz-play').style.display='block';
+    $('zh-retry-banner').style.display='none';showQuizQuestion();
+  }
+  function currentQuestion(){return quizPhase==='retry'?retryList[0]:questionList[questionIndex];}
+  function buildOptions(q){
+    const ansField=modeDetails[quizMode][1],correct=q[ansField];
+    const promptField=modeDetails[quizMode][0];
+    const values=[...new Set(vocabulary.filter(w=>w.id!==q.id && w[promptField]!==q[promptField]).map(w=>w[ansField]))].filter(x=>x!==correct);
+    if(values.length<3)return null;
+    return shuffle([correct,...shuffle(values).slice(0,3)]);
+  }
+  function showQuizQuestion(){
+    const q=currentQuestion();if(!q){resetQuiz();return;}answered=false;
+    $('zh-quiz-counter').textContent=quizPhase==='retry'?`Làm lại câu sai — còn ${retryList.length} câu`:`Câu ${questionIndex+1}/${questionList.length}`;
+    $('zh-quiz-flag').style.display=quizPhase==='retry'?'none':'';
+    $('zh-quiz-flag').classList.toggle('flagged',flagged.some(x=>x.id===q.id));
+    $('zh-quiz-flag').textContent=flagged.some(x=>x.id===q.id)?'Đã đánh dấu':'Đánh dấu làm lại';
+    const info=modeDetails[quizMode];$('zh-quiz-prompt').replaceChildren(el('div','zh-question-extra',info[2]),el('div','zh-question-main',q[info[0]]));
+    $('zh-quiz-speak').style.display=quizMode==='hanzi-to-vi'?'inline-block':'none';
+    const options=buildOptions(q);const wrap=$('zh-quiz-options');wrap.replaceChildren();
+    if(!options){wrap.append(el('p','','Không đủ 4 phương án khác nhau. Hãy thêm từ vào kho và tạo bài khác.'));return;}
+    for(const option of options){const b=el('button','quiz-option-btn',option);b.type='button';b.addEventListener('click',()=>chooseAnswer(option,q[info[1]],b));wrap.append(b);}
+  }
+  function chooseAnswer(chosen,correct,button){
+    if(answered)return;answered=true;const isCorrect=chosen===correct;
+    button.classList.add(isCorrect?'correct':'wrong');
+    $('zh-quiz-options').querySelectorAll('button').forEach(b=>b.disabled=true);
+    const q=currentQuestion();
+    if(quizPhase==='retry'){
+      setTimeout(()=>{retryList.shift();if(!isCorrect)retryList.push(q);if(!retryList.length)finishRetry();else showQuizQuestion();},850);return;
+    }
+    if(isCorrect)quizScore++;else missed.push(q);
+    setTimeout(()=>{if(questionIndex+1<questionList.length){questionIndex++;showQuizQuestion();}else finishQuiz();},850);
+  }
+  function finishQuiz(){
+    $('zh-quiz-play').style.display='none';$('zh-quiz-result').style.display='block';
+    $('zh-result-title').textContent=quizReview?'Đã hoàn thành lượt ôn':'Đã xong lượt kiểm tra';
+    $('zh-result-score').textContent=`${quizScore}/${originalTotal}`;
+    const pct=Math.round(100*quizScore/originalTotal);
+    if(!quizReview){zhBest=Math.max(zhBest,pct);safeWrite(STORAGE.best,zhBest);zhHistory.unshift({date:new Date().toLocaleString('vi-VN'),topic:quizTopicsLabel,modeLabel:modeDetails[quizMode][3],score:quizScore,total:originalTotal,percent:pct});zhHistory=zhHistory.slice(0,50);safeWrite(STORAGE.history,zhHistory);}
+    $('zh-quiz-best').textContent=`Điểm cao nhất: ${zhBest}%`;
+    $('zh-mandatory-retry').style.display=missed.length?'inline-block':'none';
+    $('zh-flagged-retry').style.display=!missed.length&&flagged.length?'inline-block':'none';
+    $('zh-quiz-retry-msg').textContent=missed.length?`Bạn sai ${missed.length} câu. Cần làm lại đúng các câu này trước khi bắt đầu bài khác.`:(flagged.length?`Có ${flagged.length} câu đã đánh dấu để ôn lại.`:'');
+    $('zh-new-quiz').disabled=missed.length>0;renderStats();
+  }
+  function finishRetry(){quizPhase='main';missed=[];$('zh-quiz-play').style.display='none';$('zh-quiz-result').style.display='block';
+    $('zh-result-title').textContent='Đã hoàn thành phần làm lại!';$('zh-mandatory-retry').style.display='none';$('zh-quiz-retry-msg').textContent=flagged.length?`Có ${flagged.length} câu đã đánh dấu để ôn lại.`:'';
+    $('zh-flagged-retry').style.display=flagged.length?'inline-block':'none';$('zh-new-quiz').disabled=false;}
+  function startMandatoryRetry(){retryList=missed.slice();quizPhase='retry';$('zh-quiz-result').style.display='none';$('zh-quiz-play').style.display='block';$('zh-retry-banner').style.display='block';$('zh-retry-banner').textContent='Bắt buộc làm lại các câu sai';showQuizQuestion();}
+  function startFlaggedRetry(){if(!flagged.length)return;startQuiz(true,flagged.slice());$('zh-retry-banner').style.display='block';$('zh-retry-banner').textContent='Ôn các câu đã đánh dấu (không ghi vào điểm chính)';}
+  function renderStats(){
+    const sum=$('zh-stats-summary');sum.replaceChildren();const mastered=vocabulary.filter(w=>w.mastered).length;
+    const avg=zhHistory.length?Math.round(zhHistory.reduce((s,x)=>s+x.percent,0)/zhHistory.length):0;
+    for(const [value,label] of [[String(vocabulary.length),'Tổng số từ'],[String(mastered),'Đã thuộc'],[zhHistory.length?avg+'%':'—','Điểm trung bình'],[zhHistory.length?zhBest+'%':'—','Điểm cao nhất']]){
+      const card=el('div','stats-card');card.append(el('div','stats-value',value),el('div','stats-label',label));sum.append(card);
+    }
+    const tb=$('zh-stats-body');tb.replaceChildren();
+    if(!zhHistory.length){const row=el('tr');const c=el('td','','Chưa có lượt kiểm tra Chinese nào');c.colSpan=5;row.append(c);tb.append(row);return;}
+    for(const h of zhHistory){const row=el('tr');for(const v of [h.date,h.topic,h.modeLabel,`${h.score}/${h.total}`,`${h.percent}%`])row.append(el('td','',String(v)));tb.append(row);}
+  }
+  function initEventHandlers(){
+    bind('language-en','click',()=>switchLanguage('en'));bind('language-zh','click',()=>switchLanguage('zh'));
+    for(const t of ['study','quiz','stats'])bind('zh-tab-'+t,'click',()=>switchChineseTab(t));
+    bind('zh-unlock-btn','click',()=>{if(unlocked){unlocked=false;updateLock();return;}if($('zh-password').value===APP_PASSWORD){unlocked=true;$('zh-password').value='';updateLock();}else alert('Mật khẩu không đúng.');});
+    bind('zh-password','keydown',e=>{if(e.key==='Enter')$('zh-unlock-btn').click();});
+    bind('zh-add-btn','click',addWord);bind('zh-remove-test','click',removeTest);
+    for(const id of ['zh-filter-topic','zh-filter-level'])bind(id,'change',()=>{tableLimit=100;currentIndex=0;filterWords();});
+    bind('zh-hide-mastered','click',()=>{hideMastered=!hideMastered;currentIndex=0;filterWords();});
+    bind('zh-show-pinyin','change',renderCard);
+    bind('zh-order-seq','click',()=>{randomOrder=false;currentIndex=0;filterWords();});
+    bind('zh-order-rand','click',()=>{randomOrder=true;currentIndex=0;filterWords();});
+    bind('zh-flashcard','click',flipCard);bind('zh-flashcard','keydown',e=>{if(e.target===$('zh-flashcard')&&(e.key==='Enter'||e.key===' ')){e.preventDefault();flipCard();}});
+    bind('zh-toggle-mastered','click',()=>{if(currentWord())toggleMastered(currentWord().id);});
+    bind('zh-prev','click',()=>moveCard(-1));bind('zh-next','click',()=>moveCard(1));
+    bind('zh-table-toggle','click',()=>{tableVisible=!tableVisible;$('zh-table-wrapper').style.display=tableVisible?'block':'none';$('zh-table-toggle').textContent=tableVisible?'Ẩn danh sách':'Xem danh sách';renderTable();});
+    bind('zh-export-vocab','click',()=>{if(checkUnlock())downloadJSON('TuVungTiengTrung.json',vocabulary);});
+    bind('zh-import-vocab','click',()=>{if(checkUnlock())$('zh-import-file').click();});
+    bind('zh-import-file','change',e=>{importVocab(e.target.files[0]);e.target.value='';});
+    bind('zh-export-backup','click',()=>{if(checkUnlock())exportBackup();});
+    bind('zh-import-backup','click',()=>{if(checkUnlock())$('zh-backup-file').click();});
+    bind('zh-backup-file','change',e=>{restoreBackup(e.target.files[0]);e.target.value='';});
+    bind('zh-bulk-open','click',()=>{if(checkUnlock()){$('zh-bulk-modal').classList.add('active');$('zh-bulk-text').value='';previewBulk();}});
+    bind('zh-bulk-cancel','click',()=>$('zh-bulk-modal').classList.remove('active'));
+    bind('zh-bulk-text','input',previewBulk);bind('zh-bulk-confirm','click',commitBulk);
+    $('zh-quiz-mode-buttons').querySelectorAll('button[data-mode]').forEach(b=>b.addEventListener('click',()=>{
+      quizMode=b.dataset.mode;$('zh-quiz-mode-buttons').querySelectorAll('button').forEach(x=>x.classList.toggle('selected',x===b));
+    }));
+    bind('zh-start-quiz','click',()=>startQuiz());
+    bind('zh-quiz-speak','click',()=>{const q=currentQuestion();if(q)speakChinese(q.hanzi);});
+    bind('zh-quiz-flag','click',()=>{const q=currentQuestion();if(!q)return;const i=flagged.findIndex(x=>x.id===q.id);if(i>=0)flagged.splice(i,1);else flagged.push(q);$('zh-quiz-flag').classList.toggle('flagged',i<0);$('zh-quiz-flag').textContent=i<0?'Đã đánh dấu':'Đánh dấu làm lại';});
+    bind('zh-quiz-exit','click',()=>{if(confirm('Thoát bài kiểm tra hiện tại? Nếu đang làm lại câu sai, lượt ôn sẽ bị bỏ dở.'))resetQuiz();});
+    bind('zh-mandatory-retry','click',startMandatoryRetry);bind('zh-flagged-retry','click',startFlaggedRetry);
+    bind('zh-new-quiz','click',resetQuiz);
+    bind('zh-history-clear','click',()=>{if(!checkUnlock()||!confirm('Xóa toàn bộ lịch sử kiểm tra Chinese trên máy này?'))return;zhHistory=[];zhBest=0;safeWrite(STORAGE.history,zhHistory);safeWrite(STORAGE.best,0);renderStats();});
+  }
+  initEventHandlers();updateLock();initChinese();
+  window.ChineseV2Test = Object.freeze({version:'2.0-P1',sampleCount:seededTuples.length,getSummary:()=>({vocabularyCount:vocabulary.length,testCount:vocabulary.filter(w=>w.topic==='test').length,ready,cloudAvailable})});
+})();
+
 </script>
 </body>
 </html>
