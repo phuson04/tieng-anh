@@ -335,6 +335,19 @@ th { background-color: #0d9488; color: white; }
 .score-bar-wrap { background: #eee; border-radius: 6px; overflow: hidden; height: 7px; width: 100%; margin-top: 5px; min-width: 70px; }
 .score-bar-fill { height: 100%; border-radius: 6px; transition: width 0.3s; }
 .pct-badge { padding: 3px 9px; border-radius: 6px; font-size: 12px; font-weight: bold; color: white; display: inline-block; }
+
+/* P3 - Firebase sharded data storage: controls do not change study/quiz UIs */
+body.v3-migrating .language-workspace {pointer-events:none;opacity:.75;}
+#cloud-v3-tools { box-sizing:border-box; width:90%;max-width:800px;background:#fff;border:1px solid #cde4e0;
+  border-radius:12px;box-shadow:0 3px 10px #0000000a;padding:14px 17px;margin:0 auto 15px;color:#264c48; }
+#cloud-v3-tools .cloud-title {font-size:16px;font-weight:700;margin-bottom:5px;}
+#cloud-v3-tools .cloud-desc {font-size:13px;line-height:1.5;color:#546c69;margin-bottom:10px;}
+#cloud-v3-tools .cloud-actions {display:flex;gap:8px;flex-wrap:wrap;}
+#cloud-v3-tools button {padding:9px 12px;border:0;border-radius:7px;cursor:pointer;font-size:13px;font-weight:700;background:#0d9488;color:#fff;}
+#cloud-v3-tools button.secondary {background:#64748b;}
+#cloud-v3-tools button:disabled {opacity:.6;cursor:wait;}
+#cloud-v3-status {font-size:13px;margin-top:9px;line-height:1.5;white-space:pre-line;}
+
 /* ===== V2 CHINESE - tất cả style mới được giới hạn theo workspace ===== */
 .language-switch {display:flex;gap:8px;padding:7px;background:white;border-radius:26px;margin:5px 8px 13px;box-shadow:0 3px 12px #0001;flex-wrap:wrap;justify-content:center}
 .language-btn {border:0;border-radius:22px;padding:10px 24px;cursor:pointer;font-size:16px;font-weight:700;background:#eff4f5;color:#3f5055}
@@ -400,6 +413,19 @@ th { background-color: #0d9488; color: white; }
   <button type="button" class="language-btn active" id="language-en" aria-pressed="true">English</button>
   <button type="button" class="language-btn" id="language-zh" aria-pressed="false">中文 · TOCFL</button>
 </div>
+<!-- DATA SAFETY V3: thao tác một lần; không tự xóa document cũ -->
+<section id="cloud-v3-tools" aria-label="Quản lý sao lưu và đồng bộ Firebase">
+  <div class="cloud-title">Dữ liệu &amp; đồng bộ – English / 中文</div>
+  <div class="cloud-desc">Sao lưu cả hai kho trước khi nâng cấp. Chuyển dữ liệu sang các nhóm nhỏ để mở rộng Level 4–5; dữ liệu cũ trên Firebase không bị xóa.</div>
+  <div class="cloud-actions">
+    <button type="button" id="cloud-v3-backup">1. Tải bản sao lưu đầy đủ</button>
+    <button type="button" id="cloud-v3-migrate">2. Nâng cấp lưu trữ</button>
+    <button type="button" id="cloud-v3-check" class="secondary">Kiểm tra trạng thái</button>
+    <button type="button" id="cloud-v3-restore" class="secondary">Khôi phục từ bản sao</button>
+    <input type="file" id="cloud-v3-restore-input" accept=".json,application/json" hidden>
+  </div>
+  <div id="cloud-v3-status" role="status" aria-live="polite">Đang kiểm tra hai kho từ vựng…</div>
+</section>
 <main id="english-workspace" class="language-workspace">
 
 <div class="nav-bar">
@@ -737,26 +763,188 @@ try {
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
 
-  window._fbSave = async function(data) {
-    try {
-      await db.collection("vocab").doc("main").set({ list: data });
-    } catch(e) { console.error("Firebase save error:", e); }
-  };
+  // Storage V3: 64 stable hash buckets per language in the EXISTING collections.
+  // Legacy vocab/main & vocab_zh/main remain untouched after migration.
+  window.VocabCloudV3 = (() => {
+    const BUCKETS = 64;
+    const COL = {en: 'vocab', zh: 'vocab_zh'};
+    const states = {
+      en: {mode:'unknown', revision:0, snapshot:[], queue:Promise.resolve()},
+      zh: {mode:'unknown', revision:0, snapshot:[], queue:Promise.resolve()}
+    };
+    const clone = value => JSON.parse(JSON.stringify(value));
+    const stable = value => JSON.stringify(value, function(k,v) {
+      if (v && typeof v === 'object' && !Array.isArray(v)) {
+        return Object.fromEntries(Object.keys(v).sort().map(key=>[key,v[key]]));
+      }
+      return v;
+    });
+    function hash(text) {
+      let n=2166136261;
+      for(let i=0;i<text.length;i++) {n^=text.charCodeAt(i); n=Math.imul(n,16777619);}
+      return n>>>0;
+    }
+    const checksum = list => hash(stable(list)).toString(16).padStart(8,'0') + '-' + stable(list).length;
+    const collection = lang => db.collection(COL[lang]);
+    const bucketName = i => 'part_'+String(i).padStart(2,'0');
+    function bucketsFor(lang, list) {
+      const buckets = Array.from({length:BUCKETS},()=>[]);
+      list.forEach((w,pos) => {
+        // English V1 has no id: use its lexical key, while Chinese uses stable ids.
+        const key=lang==='zh' && w.id ? String(w.id) :
+          lang==='en' ? [w.en,w.ipa,w.vi].join('\u0001') : [w.hanzi,w.pinyin,w.vi].join('\u0001');
+        const idx=hash(key)%BUCKETS;
+        buckets[idx].push({...w,__v3_order:pos});
+      });
+      return buckets;
+    }
+    const manifestRef = lang => collection(lang).doc('meta_v3');
+    async function docServer(ref) {return ref.get({source:'server'});}
+    async function readLegacy(lang) {
+      const doc=await docServer(collection(lang).doc('main'));
+      if (!doc.exists) return {found:false,list:null};
+      const list=doc.data()?.list;
+      if (!Array.isArray(list)) throw Error('Document main của '+lang+' không chứa mảng list hợp lệ.');
+      return {found:true,list:clone(list)};
+    }
+    async function readV3(lang,metaSnapshot) {
+      const doc=metaSnapshot||await docServer(manifestRef(lang));
+      if(!doc.exists) return null;
+      const meta=doc.data();
+      if(meta?.schema!==3||meta?.bucketCount!==BUCKETS||!Array.isArray(meta.bucketIds))
+        throw Error('Metadata V3 '+lang+' không hợp lệ. Không ghi đè dữ liệu.');
+      if(meta.bucketIds.some(x=>!/^part_\d\d$/.test(x)) || new Set(meta.bucketIds).size!==meta.bucketIds.length)
+        throw Error('Danh sách các nhóm dữ liệu V3 không hợp lệ.');
+      const docs=await Promise.all(meta.bucketIds.map(id=>docServer(collection(lang).doc(id))));
+      const rows=[];
+      for(let i=0;i<docs.length;i++) {
+        const part=docs[i];
+        if(!part.exists||part.data()?.schema!==3||!Array.isArray(part.data()?.items))
+          throw Error('Thiếu hoặc hỏng nhóm '+meta.bucketIds[i]+' ('+lang+').');
+        for(const w of part.data().items) {
+          if(!Number.isInteger(w.__v3_order)||w.__v3_order<0)
+            throw Error('Thứ tự dữ liệu V3 không hợp lệ.');
+          rows.push(w);
+        }
+      }
+      rows.sort((a,b)=>a.__v3_order-b.__v3_order);
+      const list=rows.map(w=>{const copy={...w};delete copy.__v3_order;return copy;});
+      if(list.length!==meta.wordCount || checksum(list)!==meta.checksum ||
+         rows.some((w,i)=>w.__v3_order!==i))
+        throw Error('Không khớp kiểm tra toàn vẹn '+lang+' V3. Dữ liệu không được ghi đè.');
+      // Detect mid-read changes, retry on caller if needed.
+      const final=await docServer(manifestRef(lang));
+      if(!final.exists || final.data()?.revision!==meta.revision)
+        throw Error('Dữ liệu cloud thay đổi trong khi tải '+lang+'. Hãy thử lại.');
+      return {list,revision:meta.revision};
+    }
+    async function load(lang) {
+      if(!COL[lang]) throw Error('Ngôn ngữ không hợp lệ.');
+      await states[lang].queue;
+      const meta=await docServer(manifestRef(lang));
+      if(meta.exists) {
+        let data;
+        try {data=await readV3(lang,meta);}
+        catch(e){if(/thay đổi trong khi tải/.test(e.message))data=await readV3(lang);else throw e;}
+        states[lang].mode='v3';states[lang].revision=data.revision;states[lang].snapshot=clone(data.list);
+        return {list:clone(data.list), mode:'v3', found:true};
+      }
+      const legacy=await readLegacy(lang);
+      states[lang].mode='legacy';states[lang].revision=0;
+      states[lang].snapshot=legacy.found?clone(legacy.list):[];
+      return {list:legacy.list,mode:'legacy',found:legacy.found};
+    }
+    async function saveInternal(lang,list) {
+      if(!Array.isArray(list))throw Error('Dữ liệu gửi lên Firebase phải là mảng.');
+      const state=states[lang], data=clone(list);
+      if(state.mode==='unknown') throw Error('Chưa tải xong cloud '+lang+'.');
+      if(state.mode==='legacy') {
+        // Before migration, preserve original behavior, but report real failures.
+        await collection(lang).doc('main').set({list:data,updatedAt:Date.now(),version:1});
+        state.snapshot=clone(data);
+        return;
+      }
+      const old=bucketsFor(lang,state.snapshot), next=bucketsFor(lang,data);
+      const changed=[];
+      for(let i=0;i<BUCKETS;i++)if(stable(old[i])!==stable(next[i]))changed.push(i);
+      if(!changed.length)return;
+      const ids=next.map((w,i)=>w.length?bucketName(i):null).filter(Boolean);
+      const expected=state.revision;
+      await db.runTransaction(async tx => {
+        const metaSnap=await tx.get(manifestRef(lang));
+        if(!metaSnap.exists || metaSnap.data()?.schema!==3 || metaSnap.data()?.revision!==expected)
+          throw Error('CONFLICT_V3: Kho '+lang+' đã được sửa ở thiết bị khác. Thay đổi trên máy này vẫn được giữ; hãy xuất bản sao lưu trước khi tải lại.');
+        for(const i of changed) {
+          const ref=collection(lang).doc(bucketName(i));
+          if(next[i].length)tx.set(ref,{schema:3,items:next[i]});
+          else tx.delete(ref);
+        }
+        tx.set(manifestRef(lang),{schema:3,bucketCount:BUCKETS,revision:expected+1,
+          wordCount:data.length,bucketIds:ids,checksum:checksum(data),updatedAt:Date.now()});
+      });
+      state.snapshot=clone(data);state.revision=expected+1;
+    }
+    function save(lang,list) {
+      if(window.__v3MigrationLock) return Promise.reject(Error('Đang chuyển cấu trúc Firebase; tạm ngừng ghi cho đến khi hoàn thành.'));
+      if(!COL[lang]) return Promise.reject(Error('Ngôn ngữ không hợp lệ.'));
+      const data=clone(list), state=states[lang];
+      const task=state.queue.then(()=>saveInternal(lang,data));
+      state.queue=task.catch(()=>{});
+      return task;
+    }
+    async function migrate(lang,list) {
+      if(!COL[lang]||!Array.isArray(list))throw Error('Thiếu dữ liệu chuyển đổi.');
+      await states[lang].queue;
+      const existing=await docServer(manifestRef(lang));
+      if(existing.exists) {
+        const loaded=await load(lang);
+        return {already:true,count:loaded.list?.length??0};
+      }
+      const data=clone(list), parts=bucketsFor(lang,data);
+      const batch=db.batch();
+      const ids=[];
+      for(let i=0;i<BUCKETS;i++) if(parts[i].length) {
+        const id=bucketName(i);ids.push(id);
+        batch.set(collection(lang).doc(id),{schema:3,items:parts[i]});
+      }
+      batch.set(manifestRef(lang),{schema:3,bucketCount:BUCKETS,revision:1,
+        wordCount:data.length,bucketIds:ids,checksum:checksum(data),updatedAt:Date.now()});
+      // One atomic batch. Legacy main remains untouched, even on success.
+      await batch.commit();
+      const verified=await load(lang);
+      if(checksum(verified.list)!==checksum(data))
+        throw Error('Dữ liệu sau chuyển đổi không khớp! Bản main cũ vẫn còn nguyên.');
+      return {already:false,count:data.length,parts:ids.length};
+    }
+    async function overview() {
+      const result={};
+      for(const lang of ['en','zh']) {
+        const meta=await docServer(manifestRef(lang));
+        if(meta.exists) {
+          if(meta.data()?.schema!==3)throw Error('Metadata của '+lang+' sai phiên bản.');
+          result[lang]={mode:'v3',count:meta.data().wordCount,parts:meta.data().bucketIds?.length??0};
+        } else {
+          const old=await readLegacy(lang);
+          result[lang]={mode:'legacy',count:old.list?.length??0,parts:1};
+        }
+      }
+      return result;
+    }
+    return Object.freeze({load,save,migrate,overview,readLegacy,
+      getMode:lang=>states[lang]?.mode??'unknown',getSnapshot:lang=>clone(states[lang].snapshot),
+      stable,checksum});
+  })();
 
-  window._fbLoad = async function() {
-    try {
-      const snap = await db.collection("vocab").doc("main").get();
-      if (snap.exists) return snap.data().list;
-    } catch(e) { console.error("Firebase load error:", e); }
-    return null;
-  };
-
+  window._fbSave = data => window.VocabCloudV3.save('en',data);
+  window._fbLoad = async () => (await window.VocabCloudV3.load('en')).list;
   window._fbReady = true;
-  document.dispatchEvent(new Event("firebase-ready"));
+  document.dispatchEvent(new Event('firebase-ready'));
 } catch(e) {
-  console.warn("Firebase không khởi động được:", e);
-  document.dispatchEvent(new Event("firebase-ready"));
+  console.warn('Firebase không khởi động được:',e);
+  window._fbReady = false;
+  document.dispatchEvent(new Event('firebase-ready'));
 }
+
 </script>
 
 <script>
@@ -790,12 +978,8 @@ if (!vocabulary || vocabulary.length === 0) {
 }
 
 // An toàn: nếu đóng tab/thoát trang đúng lúc đang chờ gộp lưu (trong 800ms), ép lưu ngay
-window.addEventListener("beforeunload", () => {
-  if (fbSaveTimer && window._fbSave) {
-    clearTimeout(fbSaveTimer);
-    window._fbSave(vocabulary);
-  }
-});
+// Dữ liệu local đã được lưu ngay khi sửa. beforeunload không thể bảo đảm
+// hoàn tất một lệnh ghi mạng; KHÔNG tuyên bố đồng bộ thành công ở đây.
 
 let filteredVocab = [...vocabulary];
 let currentIndex = 0;
@@ -816,51 +1000,55 @@ function hideSyncBar() {
 
 let fbSaveTimer = null;
 
+const EN_DIRTY_KEY='myAppEnCloudPendingV3';
+const EN_RESCUE_KEY='myAppEnBackupBeforeConflictV3';
 function saveToMemory() {
-  // Lưu local ngay lập tức — rẻ, không lo mất dữ liệu nếu đóng tab đột ngột
-  localStorage.setItem("myAppVocabEN", JSON.stringify(vocabulary));
-
-  // Đồng bộ Firebase thì GỘP LẠI: nếu bấm liên tiếp nhiều thao tác trong lúc gõ/tick nhanh,
-  // chỉ thực sự gửi lên cloud sau khi dừng thao tác 800ms — tránh gửi mạng liên tục gây giật.
-  if (window._fbSave) {
-    showSyncBar("⏳ Đang chờ đồng bộ...", "#888");
-    clearTimeout(fbSaveTimer);
-    fbSaveTimer = setTimeout(() => {
-      showSyncBar("☁️ Đang lưu lên cloud...");
-      window._fbSave(vocabulary).then(() => {
-        showSyncBar("✅ Đã đồng bộ cloud", "#34a853");
-        hideSyncBar();
-      }).catch(() => {
-        showSyncBar("⚠️ Lưu cloud thất bại (đã lưu local)", "#f57c00");
-        hideSyncBar();
-      });
-    }, 800);
-  }
+  try {
+    localStorage.setItem('myAppVocabEN', JSON.stringify(vocabulary));
+    localStorage.setItem(EN_DIRTY_KEY,'1');
+  } catch(e) { showSyncBar('⚠️ Không lưu được trên máy: '+e.message,'#b45309');return; }
+  if(!window._fbSave) {showSyncBar('⚠️ Chưa kết nối Firebase; dữ liệu mới ở trên máy','#b45309');return;}
+  showSyncBar('⏳ Đang chờ đồng bộ…','#64748b');
+  clearTimeout(fbSaveTimer);
+  fbSaveTimer=setTimeout(async()=>{
+    fbSaveTimer=null;
+    const payload=JSON.parse(JSON.stringify(vocabulary));
+    showSyncBar('☁️ Đang lưu lên Firebase…');
+    try {
+      await window._fbSave(payload);
+      if(JSON.stringify(vocabulary)===JSON.stringify(payload))localStorage.removeItem(EN_DIRTY_KEY);
+      showSyncBar('✅ Đã đồng bộ English','#34a853');hideSyncBar();
+    }catch(e){showSyncBar('⚠️ English chưa đồng bộ cloud: '+(e.message||e),'#b45309');}
+  },800);
 }
 
-// Load dữ liệu từ Firebase khi khởi động
 async function initApp() {
-  showSyncBar("☁️ Đang tải dữ liệu từ cloud...");
-  if (window._fbLoad) {
-    const cloudData = await window._fbLoad();
-    if (cloudData && cloudData.length > 0) {
-      vocabulary = cloudData.map(w => {
-        if (!w.topic) w.topic = "Chung";
-        if (w.mastered === undefined) w.mastered = false;
-        return w;
-      });
-      localStorage.setItem("myAppVocabEN", JSON.stringify(vocabulary));
-      showSyncBar("✅ Đã tải dữ liệu từ cloud", "#34a853");
-    } else {
-      showSyncBar("📱 Dùng dữ liệu local", "#888");
-    }
+  showSyncBar('☁️ Đang tải English từ Firebase…');
+  if(window._fbLoad){
+    try {
+      const cloudData=await window._fbLoad();
+      if(Array.isArray(cloudData)) {
+        const localRaw=localStorage.getItem('myAppVocabEN');
+        const local=localRaw===null?null:JSON.parse(localRaw);
+        const dirty=localStorage.getItem(EN_DIRTY_KEY)==='1';
+        const mismatch=Array.isArray(local) && window.VocabCloudV3.stable(local)!==window.VocabCloudV3.stable(cloudData);
+        if(dirty&&mismatch){
+          try{localStorage.setItem(EN_RESCUE_KEY,JSON.stringify({date:new Date().toISOString(),list:local}));}catch(e){}
+          const cloudChoice=confirm('English trên máy có thay đổi CHƯA đồng bộ và khác cloud. Một bản dự phòng trên máy đã được giữ.\n\nOK: Dùng dữ liệu cloud.\nHủy: Giữ dữ liệu máy này để thử đồng bộ (có thể bị chặn nếu cloud đã thay đổi).');
+          if(!cloudChoice){vocabulary=local;saveToMemory();}
+          else {vocabulary=cloudData;localStorage.removeItem(EN_DIRTY_KEY);}
+        }else {
+          if(mismatch){try{localStorage.setItem(EN_RESCUE_KEY,JSON.stringify({date:new Date().toISOString(),list:local}));}catch(e){}}
+          vocabulary=cloudData;localStorage.removeItem(EN_DIRTY_KEY);
+        }
+        vocabulary=vocabulary.map(w=>({...w,topic:w.topic||'Chung',mastered:w.mastered===true}));
+        localStorage.setItem('myAppVocabEN',JSON.stringify(vocabulary));
+        showSyncBar('✅ Đã tải English từ Firebase','#34a853');
+      } else showSyncBar('📱 English đang dùng dữ liệu trên máy','#64748b');
+    }catch(e){showSyncBar('⚠️ Không đọc được English cloud; giữ dữ liệu trên máy: '+e.message,'#b45309');}
   }
   hideSyncBar();
-
-  filteredVocab = [...vocabulary];
-  updateTopicDropdowns();
-  applyFilter();
-  setLockedUI(true); // khởi động ở trạng thái khóa
+  filteredVocab=[...vocabulary];updateTopicDropdowns();applyFilter();setLockedUI(true);
 }
 
 function switchTab(tabName) {
@@ -1797,7 +1985,7 @@ function renderStatsView() {
 initApp();
 </script>
 <script>
-/* ===== V2 P1: CHINESE VOCABULARY (tách hoàn toàn dữ liệu English) ===== */
+/* ===== V2 P1: CHINESE VOCABULARY (tách hoàn toàn dữ liệu English; Firestore V3) ===== */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
@@ -1886,13 +2074,13 @@ initApp();
     const snap=vocabulary.map(w=>({...w})), snapHash=snapshotHash(snap);
     if(snapHash===lastWrittenHash){setStatus('Chinese đã đồng bộ · Lịch sử Quiz lưu trên máy');return;}
     try {
-      const operation=cloudDB.collection('vocab_zh').doc('main').set({list:snap,updatedAt:Date.now(),version:1});
+      const operation=window.VocabCloudV3.save('zh',snap);
       inFlightCloudWrite=operation;
       await operation;
       lastWrittenHash=snapHash;syncMeta.lastSyncedHash=snapHash;setMeta();
-      setStatus('Đã đồng bộ từ Chinese · Lịch sử Quiz lưu trên máy');
+      setStatus('Đã đồng bộ Chinese · Lịch sử Quiz lưu trên máy');
       if(snapshotHash(vocabulary)!==snapHash)scheduleCloudSave();
-    }catch(e){setStatus('Đã lưu trên máy, chưa đồng bộ cloud: '+(e.code||e.message),true);}
+    }catch(e){setStatus('Chinese chưa đồng bộ cloud: '+(e.message||e),true);}
   }
   async function chooseConflict() {
     $('zh-conflict-modal').classList.add('active');
@@ -1909,9 +2097,9 @@ initApp();
     }catch(e){cloudAvailable=false;}
     let remote=null, gotCloud=false;
     if(cloudAvailable){try{
-      const doc=await cloudDB.collection('vocab_zh').doc('main').get();
+      const result=await window.VocabCloudV3.load('zh');
       gotCloud=true;
-      if(doc.exists){remote=normalizeList(doc.data()?.list);if(remote===null)throw new Error('Dữ liệu cloud không hợp lệ');}
+      if(result.found){remote=normalizeList(result.list);if(remote===null)throw Error('Dữ liệu cloud không hợp lệ');}
     }catch(e){cloudAvailable=false;setStatus('Không thể đọc Chinese cloud, đang dùng dữ liệu trên máy: '+(e.code||e.message),true);}}
     if(localRaw!==null && local===null){ // Không tự ghi đè JSON hỏng trong máy.
       vocabulary=[];ready=false;renderAll();return;
@@ -2069,7 +2257,7 @@ initApp();
       // Chờ lệnh ghi cũ kết thúc trước, tránh ghi đè ngược danh sách đã xóa.
       await inFlightCloudWrite.catch(()=>{});
       const snap=nextWords.map(w=>({...w}));
-      await cloudDB.collection('vocab_zh').doc('main').set({list:snap,updatedAt:Date.now(),version:1});
+      await window.VocabCloudV3.save('zh',snap);
       lastWrittenHash=snapshotHash(snap);
       syncMeta.lastSyncedHash=lastWrittenHash;setMeta();
       setStatus('Đã đồng bộ xóa Chinese lên Firebase · Lịch sử Quiz lưu trên máy');
@@ -2265,9 +2453,156 @@ initApp();
     bind('zh-history-clear','click',()=>{if(!checkUnlock()||!confirm('Xóa toàn bộ lịch sử kiểm tra Chinese trên máy này?'))return;zhHistory=[];zhBest=0;safeWrite(STORAGE.history,zhHistory);safeWrite(STORAGE.best,0);renderStats();});
   }
   initEventHandlers();updateLock();initChinese();
-  window.ChineseV2Test = Object.freeze({version:'2.0-P1',sampleCount:seededTuples.length,getSummary:()=>({vocabularyCount:vocabulary.length,testCount:vocabulary.filter(w=>w.topic==='test').length,ready,cloudAvailable})});
+  window.ChineseV2Test = Object.freeze({version:'2.1-Firestore-V3',sampleCount:seededTuples.length,getSummary:()=>({vocabularyCount:vocabulary.length,testCount:vocabulary.filter(w=>w.topic==='test').length,ready,cloudAvailable})});
 })();
 
 </script>
+
+<script>
+/* One-click full backup and guarded migration for BOTH vocabularies. */
+(() => {
+  'use strict';
+  const $=id=>document.getElementById(id);
+  const API=()=>window.VocabCloudV3;
+  let backupConfirmed=false, busy=false;
+  const setStatus=(message,error=false)=>{$('cloud-v3-status').textContent=message;$('cloud-v3-status').style.color=error?'#b45309':'#365e58';};
+  const parse=(s,alt)=>{try {return s===null?alt:JSON.parse(s);}catch(e){return alt;}};
+  const local=(key,alt=null)=>parse(localStorage.getItem(key),alt);
+  function download(filename,data){
+    const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json;charset=utf-8'}));
+    const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),5000);
+  }
+  const stamp=()=>new Date().toISOString().replace(/[:.]/g,'-');
+  async function run(label,work) {
+    if(busy)return;
+    busy=true;
+    for(const id of ['cloud-v3-backup','cloud-v3-migrate','cloud-v3-check','cloud-v3-restore'])$(id).disabled=true;
+    setStatus(label);
+    try{await work();}
+    catch(e){setStatus('Không hoàn tất: '+(e.message||String(e))+'\nDữ liệu chính trên Firebase chưa bị xóa.',true);}
+    finally{busy=false;for(const id of ['cloud-v3-backup','cloud-v3-migrate','cloud-v3-check','cloud-v3-restore'])$(id).disabled=false;}
+  }
+  async function check() {
+    if(!API())throw Error('Chưa có kết nối Firebase.');
+    const data=await API().overview();
+    const pretty=lang=>data[lang].mode==='v3'?`${data[lang].count} từ · ${data[lang].parts} nhóm (V3)`:`${data[lang].count} từ · một document (cũ)`;
+    setStatus(`English: ${pretty('en')}\n中文: ${pretty('zh')}`);
+  }
+  async function createBackup() {
+    if(!API())throw Error('Firebase chưa khả dụng. Không thể xác minh bản sao cloud.');
+    const en=await API().load('en');
+    const zh=await API().load('zh');
+    // Preserve original localStorage values as well as live cloud snapshots.
+    const packageData={type:'EN_ZH_COMPLETE_BACKUP',version:3,createdAt:new Date().toISOString(),
+      firebase:{en:{mode:en.mode,exists:en.found,list:en.list},zh:{mode:zh.mode,exists:zh.found,list:zh.list}},
+      local:{enWords:local('myAppVocabEN'),zhWords:local('myAppVocabZHTW'),
+        enQuizHistory:local('myAppEnQuizHistory',[]),enHighScore:local('myAppEnQuizHighScore_pct',0),
+        zhQuizHistory:local('myAppZhTWQuizHistory',[]),zhHighScore:local('myAppZhTWQuizHighScore_pct',0),
+        zhSyncMeta:local('myAppVocabZHTWMeta',{}),
+        enRescue:local('myAppEnBackupBeforeConflictV3'),zhRescue:local('myAppZhTWBackupBeforeConflict')}
+    };
+    download('SaoLuu_English_Chinese_'+stamp()+'.json',packageData);
+    backupConfirmed=true;
+    setStatus(`Đã yêu cầu tải bản sao lưu toàn bộ. English cloud: ${en.list?.length??0} từ; Chinese cloud: ${zh.list?.length??0} từ.\nKiểm tra file đã tải về máy rồi mới nhấn “Nâng cấp lưu trữ”.`);
+  }
+  function sameVocabulary(a,b){
+    // Compare normalized content regardless of field order, not presentation order.
+    return API().stable(a)===API().stable(b);
+  }
+  async function migrate() {
+    if(!API())throw Error('Firebase chưa sẵn sàng.');
+    if(!backupConfirmed){
+      setStatus('Bước 1: Nhấn “Tải bản sao lưu đầy đủ” trước khi nâng cấp.',true);return;
+    }
+    if(!confirm('Bạn đã thấy file sao lưu EN + Chinese trong thư mục Downloads và có thể mở nó?\n\nOK để chuyển đổi. Document main cũ được giữ nguyên.'))return;
+    const report=[];
+    window.__v3MigrationLock=true;
+    document.body.classList.add('v3-migrating');
+    try {
+    for(const [lang,storageKey] of [['en','myAppVocabEN'],['zh','myAppVocabZHTW']]) {
+      const info=await API().overview();
+      if(info[lang].mode==='v3'){report.push(`${lang}: đã ở V3`);continue;}
+      const cloud=await API().readLegacy(lang);
+      const fromLocal=local(storageKey);
+      let data=cloud.list??(Array.isArray(fromLocal)?fromLocal:[]);
+      if(Array.isArray(fromLocal)&&cloud.found&&!sameVocabulary(fromLocal,cloud.list)) {
+        // Never silently discard a local-only change in an initial migration.
+        const choice=prompt(`Kho ${lang.toUpperCase()}: dữ liệu trên máy khác dữ liệu Firebase.\n\nCloud: ${cloud.list.length} từ; máy này: ${fromLocal.length} từ.\n\nNhập CLOUD để lấy bản Firebase, LOCAL để lấy bản trên máy, hoặc HUY để dừng.\nBản sao lưu có cả hai.`, 'HUY');
+        if(choice===null||choice.trim().toUpperCase()==='HUY'){setStatus('Đã hủy nâng cấp để tránh ghi đè dữ liệu chưa quyết định.',true);return;}
+        if(choice.trim().toUpperCase()==='LOCAL')data=fromLocal;
+        else if(choice.trim().toUpperCase()!=='CLOUD')throw Error('Lựa chọn không hợp lệ.');
+      }
+      if(!Array.isArray(data))throw Error('Dữ liệu '+lang+' không hợp lệ.');
+      const migrated=await API().migrate(lang,data);
+      // Align local data with the exact verified version selected for migration.
+      // This prevents a stale local dataset from being re-uploaded on first reload.
+      localStorage.setItem(storageKey,JSON.stringify(API().getSnapshot(lang)));
+      if(lang==='en')localStorage.removeItem('myAppEnCloudPendingV3');
+      report.push(`${lang}: ${migrated.count} từ · ${migrated.parts??0} nhóm · đã kiểm tra`);
+      setStatus('Đang nâng cấp…\n'+report.join('\n'));
+    }
+    setStatus('Nâng cấp hoàn tất:\n'+report.join('\n')+'\nĐang tải lại trang để dùng phiên bản V3.');
+    setTimeout(()=>location.reload(),1200);
+    } finally {
+      window.__v3MigrationLock=false;
+      document.body.classList.remove('v3-migrating');
+    }
+  }
+  async function restoreFile(file) {
+    if(!file) return;
+    const contents=await file.text();
+    const obj=JSON.parse(contents);
+    if(obj?.type!=='EN_ZH_COMPLETE_BACKUP'||obj?.version!==3)
+      throw Error('File không phải bản sao lưu đầy đủ English + Chinese V3.');
+    let en=obj.firebase?.en?.list??obj.local?.enWords;
+    let zh=obj.firebase?.zh?.list??obj.local?.zhWords;
+    if(!Array.isArray(en)||!Array.isArray(zh))throw Error('Bản sao lưu thiếu một trong hai kho.');
+    for(const [lang,cloudList,localList] of [
+       ['English',obj.firebase?.en?.list,obj.local?.enWords],
+       ['Chinese',obj.firebase?.zh?.list,obj.local?.zhWords]
+    ]) {
+      if(Array.isArray(cloudList)&&Array.isArray(localList)&&API().stable(cloudList)!==API().stable(localList)) {
+        const choice=prompt(`Trong bản sao lưu, dữ liệu ${lang} trên máy và cloud khác nhau.\nCloud: ${cloudList.length} từ; local: ${localList.length} từ.\n\nNhập CLOUD hoặc LOCAL để chọn bản khôi phục; HUY để dừng.`, 'CLOUD');
+        if(choice===null||choice.trim().toUpperCase()==='HUY')return;
+        const selected=choice.trim().toUpperCase();
+        if(selected!=='CLOUD'&&selected!=='LOCAL')throw Error('Lựa chọn khôi phục không hợp lệ.');
+        if(lang==='English') en=selected==='LOCAL'?localList:cloudList;
+        else zh=selected==='LOCAL'?localList:cloudList;
+      }
+    }
+    const overview=await API().overview();
+    if(overview.en.mode!=='v3'||overview.zh.mode!=='v3')
+      throw Error('Vui lòng hoàn tất nâng cấp cả hai kho lên V3 trước khi khôi phục.');
+    if(!confirm(`KHÔI PHỤC sẽ THAY THẾ kho cloud hiện tại bằng dữ liệu trong file:\nEnglish ${en.length} từ, Chinese ${zh.length} từ.\n\nCác thay đổi sau ngày sao lưu sẽ mất. Bạn muốn tiếp tục?`))return;
+    if(prompt('Để xác nhận khôi phục, nhập chính xác: KHOI PHUC','')!=='KHOI PHUC')return;
+    // Capture a second rescue file before any destructive overwrite.
+    await createBackup();
+    if(!confirm('Bản sao lưu an toàn của dữ liệu HIỆN TẠI đã được yêu cầu tải về. Xác nhận lần cuối để thay thế 2 kho?'))return;
+    await API().load('en');await API().load('zh');
+    await API().save('en',en);
+    await API().save('zh',zh);
+    localStorage.setItem('myAppVocabEN',JSON.stringify(en));
+    localStorage.setItem('myAppVocabZHTW',JSON.stringify(zh));
+    if(Array.isArray(obj.local?.enQuizHistory))localStorage.setItem('myAppEnQuizHistory',JSON.stringify(obj.local.enQuizHistory));
+    if(obj.local?.enHighScore!==undefined)localStorage.setItem('myAppEnQuizHighScore_pct',JSON.stringify(obj.local.enHighScore));
+    if(Array.isArray(obj.local?.zhQuizHistory))localStorage.setItem('myAppZhTWQuizHistory',JSON.stringify(obj.local.zhQuizHistory));
+    if(obj.local?.zhHighScore!==undefined)localStorage.setItem('myAppZhTWQuizHighScore_pct',JSON.stringify(obj.local.zhHighScore));
+    localStorage.removeItem('myAppEnCloudPendingV3');
+    // Chinese metadata checksum may refer to previous vocabulary; force clean re-read.
+    localStorage.removeItem('myAppVocabZHTWMeta');
+    setStatus('Đã khôi phục hai kho lên Firebase V3. Đang tải lại trang.');
+    setTimeout(()=>location.reload(),1200);
+  }
+  $('cloud-v3-backup').addEventListener('click',()=>run('Đang sao lưu dữ liệu cloud và local…',createBackup));
+  $('cloud-v3-check').addEventListener('click',()=>run('Đang đọc trạng thái Firebase…',check));
+  $('cloud-v3-migrate').addEventListener('click',()=>run('Đang chuyển đổi dữ liệu…',migrate));
+  $('cloud-v3-restore').addEventListener('click',()=>$('cloud-v3-restore-input').click());
+  $('cloud-v3-restore-input').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';run('Đang kiểm tra bản sao lưu…',()=>restoreFile(f));});
+  // Only read state; never auto-migrate or auto-delete.
+  setTimeout(()=>run('Đang kiểm tra trạng thái Firebase…',check),1500);
+})();
+</script>
+
 </body>
 </html>
